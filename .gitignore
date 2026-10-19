@@ -1,0 +1,27 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# next.js and local build outputs
+.next/
+.next-node/
+out/
+next-env.d.ts
+
+# production
+build
+
+# misc
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+/dist/
+.vinext/
+.cloudflare/
