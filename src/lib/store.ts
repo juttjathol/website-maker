@@ -8,6 +8,7 @@ import {
   createBlock, findBlock, insertBlock, removeBlock, setPropPath, syncColumns,
 } from "./tree";
 import { clone, uid } from "./util";
+import { has3DBlocks } from "./scene-3d";
 import { dbPut } from "./db";
 
 const HISTORY_LIMIT = 60;
@@ -15,9 +16,13 @@ const HISTORY_LIMIT = 60;
 export type SaveState = "saved" | "saving" | "unsaved" | "idle" | "local" | "sync-error" | "quota";
 
 interface EditorState {
+  plan: "free" | "pro";
+  setPlan: (plan: "free" | "pro") => void;
   project: Project | null;
   currentPageId: string | null;
   selectedId: string | null;
+  sceneSelection: { blockId: string; index: number } | null;
+  selectSceneObject: (blockId: string, index: number) => void;
   hoveredId: string | null;
   device: Device;
   previewMode: boolean;
@@ -41,7 +46,7 @@ interface EditorState {
   removeBlockById: (id: string) => void;
   duplicateBlockById: (id: string) => void;
     moveBlock: (id: string, newParentId: string | null, index: number, history?: boolean) => void;
-  updateProp: (id: string, path: string, value: any) => void;
+  updateProp: (id: string, path: string, value: any, historyGroup?: string) => void;
   updateStyle: (id: string, patch: Record<string, any>) => void;
 
   /* pages */
@@ -128,8 +133,12 @@ export const useEditor = create<EditorState>((set, get) => {
   };
 
   return {
+    plan: "free",
+    setPlan: (plan) => set({ plan }),
     project: null,
     currentPageId: null,
+    sceneSelection: null,
+    selectSceneObject: (blockId, index) => set({ selectedId: blockId, sceneSelection: { blockId, index } }),
     selectedId: null,
     hoveredId: null,
     device: "desktop",
@@ -143,6 +152,7 @@ export const useEditor = create<EditorState>((set, get) => {
       set({
         project: p,
         currentPageId: p?.pages[0]?.id ?? null,
+        sceneSelection: null,
         selectedId: null,
         hoveredId: null,
         undoStack: [],
@@ -194,6 +204,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     addBlockTree: (block, parentId, index) => {
+      if (get().plan !== "pro" && has3DBlocks([block])) return;
       mutate((p) =>
         withPage(p, get().currentPageId, (page) => {
           insertBlock(page.blocks, block, parentId, index);
@@ -213,6 +224,9 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     duplicateBlockById: (id) => {
+      const source = get().getCurrentPage()?.blocks || [];
+      const block = findBlock(source, id)?.block;
+      if (get().plan !== "pro" && block && has3DBlocks([block])) return;
       mutate((p) =>
         withPage(p, get().currentPageId, (page) => {
           const loc = findBlock(page.blocks, id);
@@ -252,7 +266,9 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
-    updateProp: (id, path, value) => {
+    updateProp: (id, path, value, historyGroup) => {
+      const block = findBlock(get().getCurrentPage()?.blocks || [], id)?.block;
+      if (block?.type === "scene3d" && get().plan !== "pro") return;
       mutate(
         (p) =>
           withPage(p, get().currentPageId, (page) => {
@@ -262,11 +278,13 @@ export const useEditor = create<EditorState>((set, get) => {
             if (path === "cols") syncColumns(loc.block);
           }),
         true,
-        `prop:${id}:${path}`
+        historyGroup ?? `prop:${id}:${path}`
       );
     },
 
     updateStyle: (id, patch) => {
+      const block = findBlock(get().getCurrentPage()?.blocks || [], id)?.block;
+      if (block?.type === "scene3d" && get().plan !== "pro") return;
       mutate(
         (p) =>
           withPage(p, get().currentPageId, (page) => {

@@ -1,6 +1,6 @@
 "use client";
 import {
-  AlignLeft, ArrowRight, Award, BarChart3, Bell, BookOpen, Briefcase, Brush,
+  AlignLeft, ArrowRight, Award, BarChart3, Bell, BookOpen, Box, Briefcase, Brush,
   Building2, Calendar, Camera, Check, CircleHelp, Clock, Cloud, Code2, Columns3,
   Compass, Cpu, CreditCard, Database, Feather, FileText, Gift, Globe, Grid3x3,
   Heart, Home, Image as ImageIcon, Key, Layers, LayoutGrid, LayoutTemplate,
@@ -13,7 +13,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 export const ICONS: Record<string, LucideIcon> = {
-  AlignLeft, ArrowRight, Award, BarChart: BarChart3, BarChart3, Bell, BookOpen,
+  AlignLeft, ArrowRight, Award, BarChart: BarChart3, BarChart3, Bell, BookOpen, Box,
   Briefcase, Brush, Building2, Calendar, Camera, Check, Clock, Cloud, Code2,
   Columns3, Compass, Cpu, CreditCard, Database, Feather, FileText, Gift, Globe,
   Grid3x3, Heart, HelpCircle: CircleHelp, Home, Image: ImageIcon, Key, Layers,

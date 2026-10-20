@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   closestCenter, DndContext, DragEndEvent, DragOverlay, DragStartEvent,
@@ -11,6 +11,7 @@ import {
   Monitor, Plus, Redo2, Rocket, ShoppingBag, Smartphone, Tablet, Undo2, X,
 } from "lucide-react";
 import type { BlockType, Device, Project } from "@/lib/schema";
+import { getMyPlan } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
 import { BLOCKS } from "@/lib/registry";
 import { useEditor } from "@/lib/store";
@@ -31,6 +32,19 @@ const DEVICE_BUTTONS: { device: Device; label: string; Icon: typeof Monitor }[] 
 ];
 
 export function BuilderWorkbench({ project: initialProject }: { project: Project }) {
+  useEffect(() => {
+    let alive = true;
+    let request = 0;
+    useEditor.getState().setPlan("free");
+    const refreshPlan = async () => {
+      const current = ++request;
+      const plan = await getMyPlan().catch(() => "free" as const);
+      if (alive && current === request) useEditor.getState().setPlan(plan);
+    };
+    void refreshPlan();
+    window.addEventListener("focus", refreshPlan);
+    return () => { alive = false; window.removeEventListener("focus", refreshPlan); useEditor.getState().setPlan("free"); };
+  }, []);
   const project = useEditor((s) => s.project) || initialProject;
   const pageId = useEditor((s) => s.currentPageId);
   const device = useEditor((s) => s.device);
@@ -109,7 +123,7 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
       return true;
     } catch (error) {
       console.error("Website export failed", error);
-      showToast("Couldn't create the download. Please try again.");
+      showToast(error instanceof Error ? error.message : "Couldn't create the download. Please try again.");
       return false;
     } finally {
       setExporting(false);

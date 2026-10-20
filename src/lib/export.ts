@@ -9,6 +9,7 @@ import JSZip from "jszip";
 import type { Block, Page, Project } from "./schema";
 import { SiteBody } from "@/components/site/renderers";
 import { SITE_CSS } from "./site-css";
+import { assert3DExportAllowed } from "./scene-3d";
 import { getMyPlan } from "./db";
 import { pageFileName, walkBlocks } from "./tree";
 import { downloadBlob, escapeAttr, escapeHtml } from "./util";
@@ -244,7 +245,9 @@ export async function exportProjectZip(project: Project): Promise<void> {
   const imgFolder = zip.folder("assets");
 
   /* Free owners keep the watermark; Pro owners export without it. */
-  const watermark = (await getMyPlan()) !== "pro";
+  const plan = await getMyPlan();
+  assert3DExportAllowed(project, plan);
+  const watermark = plan !== "pro";
 
   /* harvest + download local images, build rewrite map */
   const images = new Set<string>();

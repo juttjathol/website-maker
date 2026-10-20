@@ -14,6 +14,7 @@ import { BlockRenderer, SiteBody } from "@/components/site/renderers";
 import { SiteChrome, SiteStyleTag } from "@/components/site/SiteChrome";
 import { useEditor } from "@/lib/store";
 import { cx } from "@/lib/util";
+import { useSceneEditing } from "./useSceneEditing";
 import { pageFileName } from "@/lib/tree";
 import { Copy, GripVertical, Trash2 } from "lucide-react";
 
@@ -113,6 +114,8 @@ export function Canvas({ project, previewMode = false }: { project: Project; pre
   const setCurrentPage = useEditor((s) => s.setCurrentPage);
   const hover = useEditor((s) => s.hover);
   const frameRef = useRef<HTMLDivElement>(null);
+  const plan = useEditor((s) => s.plan);
+  useSceneEditing(frameRef, plan === "pro" && !previewMode);
   const page = project.pages.find((p) => p.id === currentPageId) || project.pages[0];
 
   const onCanvasBlur = (e: React.FocusEvent) => {
@@ -194,7 +197,7 @@ export function Canvas({ project, previewMode = false }: { project: Project; pre
       <div className="canvas-scroll preview-canvas-scroll">
         <div className={cx("canvas-frame", `device-${device}`)} onClick={onCanvasClick} onSubmit={(e) => e.preventDefault()}>
           <SiteStyleTag />
-          <SiteChrome project={project}>
+          <SiteChrome project={project} plan={plan}>
             {page ? <SiteBody blocks={page.blocks} mode="preview" /> : null}
           </SiteChrome>
         </div>
@@ -212,7 +215,7 @@ export function Canvas({ project, previewMode = false }: { project: Project; pre
         onClick={onCanvasClick}
       >
         <SiteStyleTag />
-        <SiteChrome project={project}>
+        <SiteChrome project={project} plan={plan}>
           {!page || page.blocks.length === 0 ? (
             <EmptyContainer parentId={null} big />
           ) : (

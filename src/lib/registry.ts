@@ -4,6 +4,7 @@
  * generated from this file. Adding a block = adding an entry here +
  * a renderer in the site renderer files.
  */
+import { sceneObject } from "./scene-3d";
 import type { BlockDef, BlockType, FieldDef } from "./schema";
 
 const btnFields = (p: string): FieldDef[] => [
@@ -12,6 +13,15 @@ const btnFields = (p: string): FieldDef[] => [
 ];
 
 export const BLOCKS: Record<BlockType, BlockDef> = {
+  scene3d: {
+    type: "scene3d", label: "3D scene · Pro", category: "content", icon: "Box",
+    description: "Drag and style lightweight 3D objects — Webloom Pro",
+    defaultProps: { title: "A new dimension", description: "Built to stand out.",
+      background: "#100b24", height: 420, perspective: 900, animate: true,
+      objects: [sceneObject("cube"), { ...sceneObject("diamond", 1), x: 70, y: 55, size: 60 }] },
+    defaultStyle: { paddingTop: 24, paddingBottom: 24 },
+    fields: [],
+  },
   /* ------------------------------ layout ------------------------------ */
   section: {
     type: "section",

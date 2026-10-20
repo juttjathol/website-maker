@@ -100,3 +100,36 @@ The `/admin` route requires an account inserted into `public.platform_admins`; i
 ## Tech stack
 
 Next.js App Router, React, TypeScript, Zustand, dnd-kit, JSZip, Supabase Auth/SSR and Postgres Row Level Security, with Cloudflare Workers hosting via vinext. The site renderer is shared by the editor preview, static exporter and Shopify theme exporter.
+
+### Pro 3D scenes (Phase 3, first release)
+
+In **Builder → Add → Content → 3D scene · Pro**, Pro owners can add a scene
+with cubes, diamond cubes (rotated cubes), and thin rectangular panels.
+Select the scene to open its **Content** settings:
+
+- Add, duplicate or delete up to 12 objects per scene.
+- Drag an object on the canvas to position it; the matching object is selected
+  in the inspector. Keyboard: focus an object, use arrow keys to nudge 1%, or
+  Shift + arrow keys for 5% steps.
+- Change color, size, X/Y/Z rotation, depth, stage height and camera perspective.
+- Preview/export optionally animates the shapes. Reduced-motion preferences
+  disable animation. One drag is one undo step.
+
+These are CSS 3D solids made from six planes, not a full modelling engine.
+There are no GLB/GLTF uploads, physics, textures, or paid external rendering
+services. Scene data stays in the existing compact project JSON. Static and
+Shopify exports use the same geometry and CSS without a remote 3D runtime.
+Already-downloaded exports are standalone files; future subscription changes
+cannot revoke those files.
+
+Free owners see an upgrade link instead of active 3D tools. After a downgrade,
+saved scenes are preserved but locked; remove them to export on Free, or
+request Pro from **Account**. Export entry points recheck the current plan.
+Migration `20261021120000_pro_3d_scenes.sql` also prevents Free accounts from
+adding or changing 3D scenes through direct database writes, including nested
+scenes. It permits removing saved scenes and editing other blocks.
+
+Verification: `npm test`, `npm run typecheck`, `npm run lint`, and
+`npm run build:vinext`. Browser smoke tests also exercised dragging, keyboard
+movement, undo, preview, ZIP export, mobile width, reduced motion and downgrade
+locks using mocked account responses (not a real customer session).

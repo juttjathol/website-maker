@@ -18,14 +18,17 @@ export function SiteChrome({
   project,
   children,
   watermark = false,
+  plan = "free",
 }: {
   project: Project;
   children: React.ReactNode;
   /** Show the free-plan "WEBLOOM by JATHOL" bubble */
   watermark?: boolean;
+  plan?: "free" | "pro";
 }) {
   return (
     <div
+      data-plan={plan}
       className={`wk-site ${themeFontClass(project.theme.font)}`}
       style={themeVars(project.theme)}
     >
@@ -41,6 +44,7 @@ export function SiteStaticView({ project, page, watermark = false }: { project: 
     <>
       <SiteStyleTag />
       <div
+        data-plan={watermark ? "free" : "pro"}
         className={`wk-site ${themeFontClass(project.theme.font)}`}
         style={themeVars(project.theme)}
       >

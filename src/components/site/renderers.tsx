@@ -7,6 +7,7 @@
 import React from "react";
 import type { Block, EditorMode } from "@/lib/schema";
 import { blockCss, cx, hideClass } from "@/lib/util";
+import { Scene3D } from "./Scene3D";
 import { Icon, SocialIcon } from "./icons";
 
 /* --------------------------------- helpers -------------------------------- */
@@ -932,6 +933,7 @@ interface RProps {
 }
 
 const RENDERERS: Record<string, React.ComponentType<RProps>> = {
+  scene3d: ({ block, mode }) => <BlockView block={block}><Scene3D block={block} mode={mode} /></BlockView>,
   section: SectionBlock,
   columns: ColumnsBlock,
   column: ColumnBlock,

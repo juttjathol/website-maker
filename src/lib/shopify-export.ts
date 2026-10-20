@@ -3,6 +3,7 @@
 import JSZip from "jszip";
 import type { Block, Page, Project } from "./schema";
 import { renderPageHtml, SITE_JS } from "./export";
+import { assert3DExportAllowed } from "./scene-3d";
 import { getMyPlan } from "./db";
 import { SITE_CSS } from "./site-css";
 import { pageFileName, walkBlocks } from "./tree";
@@ -567,7 +568,9 @@ export async function buildShopifyThemeFiles(project: Project): Promise<Map<stri
   const firstPage = pages[0];
   const { assets, sourceNames } = await collectThemeImages(project);
   const files = new Map<string, ThemeFile>();
-  const watermark = (await getMyPlan()) !== "pro";
+  const plan = await getMyPlan();
+  assert3DExportAllowed(project, plan);
+  const watermark = plan !== "pro";
 
   files.set("layout/theme.liquid", makeThemeLayout(project));
   files.set("assets/webloom.css", SITE_CSS);

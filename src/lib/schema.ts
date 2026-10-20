@@ -114,6 +114,7 @@ export type BlockType =
   | "map"
   | "social"
   | "html"
+  | "scene3d"
   /* sections */
   | "navbar"
   | "hero"

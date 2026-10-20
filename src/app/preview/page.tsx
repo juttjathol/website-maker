@@ -23,12 +23,13 @@ export default function PreviewPage() {
       if (!project) { setError("This website is not available in this browser."); return; }
       const pageId = params.get("page");
       const page = project.pages.find((p) => p.id === pageId) || project.pages[0];
+      const plan = await getMyPlan();
       if (alive && page) {
-      setData({ project, page });
-      setWatermark((await getMyPlan()) !== "pro");
-    }
+        setData({ project, page });
+        setWatermark(plan !== "pro");
+      }
     };
-    void load();
+    void load().catch(() => { if (alive) setError("Could not load this preview. Please try again."); });
     return () => { alive = false; };
   }, []);
 
@@ -142,7 +143,7 @@ export default function PreviewPage() {
       </div>
       <div className="preview-site-wrap">
         <SiteStyleTag />
-        <SiteChrome project={data.project} watermark={watermark}>
+        <SiteChrome project={data.project} watermark={watermark} plan={watermark ? "free" : "pro"}>
           <SiteBody blocks={data.page.blocks} mode="preview" />
         </SiteChrome>
       </div>

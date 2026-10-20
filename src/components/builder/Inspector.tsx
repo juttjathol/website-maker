@@ -4,6 +4,7 @@ import { useEditor } from "@/lib/store";
 import type { BlockStyle, Device, Project } from "@/lib/schema";
 import { BLOCKS } from "@/lib/registry";
 import { findBlock } from "@/lib/tree";
+import { Scene3DInspector } from "./Scene3DInspector";
 import { FieldRow } from "./Field";
 import { Icon } from "@/components/site/icons";
 import { cx } from "@/lib/util";
@@ -53,7 +54,7 @@ export function Inspector({ project }: { project: Project }) {
           </div>
           {activeTab === "content" ? (
             <div className="space-y-4 p-4">
-              {def.fields.length ? def.fields.map((field) => {
+              {selected.type === "scene3d" ? <Scene3DInspector key={selected.id} block={selected} /> : def.fields.length ? def.fields.map((field) => {
                 if (field.showIf && selected.props[field.showIf.key] !== field.showIf.equals) return null;
                 return (
                   <FieldRow
