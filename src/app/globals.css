@@ -1,5 +1,7 @@
 
 
+@import "tailwindcss";
+
 /* ============================= ACCOUNTS ================================== */
 .account-menu-wrap { display:flex; align-items:center; gap:4px; min-width:0; }
 .account-menu-link { min-width:0; max-width:220px; gap:7px; }
