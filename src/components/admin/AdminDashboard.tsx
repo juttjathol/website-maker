@@ -2,7 +2,7 @@
 
 import React, { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Ban, CheckCircle2, Clipboard, FolderOpen, KeyRound, LoaderCircle, Search, Shield, Users, X } from "lucide-react";
+import { Activity, Ban, CheckCircle2, Clipboard, FolderOpen, KeyRound, LoaderCircle, Search, Shield, Sparkles, Users, X } from "lucide-react";
 import { formatBytes } from "@/lib/storage-limits";
 import { callWebloomAdminFunction } from "@/lib/supabase/admin-functions";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -15,6 +15,16 @@ export interface AdminCustomer {
   suspended: boolean;
   mustChangePassword: boolean;
   projectCount: number;
+  plan: "free" | "pro";
+}
+
+export interface AdminSubscriptionRequest {
+  id: number;
+  userId: string;
+  email: string;
+  message: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
 }
 
 export interface AdminAuditItem {
@@ -50,6 +60,7 @@ export function AdminDashboard({
   audit,
   currentAdminId,
   storageStats,
+  subscriptionRequests,
 }: {
   customers: AdminCustomer[];
   totalCustomers: number;
@@ -58,11 +69,13 @@ export function AdminDashboard({
   audit: AdminAuditItem[];
   currentAdminId: string;
   storageStats: AdminStorageStats | null;
+  subscriptionRequests: AdminSubscriptionRequest[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const [pendingId, setPendingId] = useState("");
+  const [pendingSubId, setPendingSubId] = useState("");
   const [creating, setCreating] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createEmail, setCreateEmail] = useState("");
@@ -140,6 +153,40 @@ export function AdminDashboard({
     router.refresh();
   };
 
+  const setCustomerPlan = async (customer: AdminCustomer, plan: "free" | "pro") => {
+    const label = plan === "pro" ? "grant Pro and remove their watermark" : "return this customer to the free plan (watermark comes back)";
+    if (!window.confirm(`Do you want to ${label} for ${customer.email}?`)) return;
+    setPendingSubId(customer.id);
+    setMessage("");
+    try {
+      await callWebloomAdminFunction({ action: "set_user_plan", userId: customer.id, plan });
+      setMessage(`${customer.email} is now on the ${plan} plan.`);
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The subscription could not be updated.");
+    } finally {
+      setPendingSubId("");
+    }
+  };
+
+  const reviewSubscriptionRequest = async (request: AdminSubscriptionRequest, status: "approved" | "rejected") => {
+    const note = status === "approved" && request.userId
+      ? " Their account will be upgraded to Pro and the watermark removed."
+      : "";
+    if (!window.confirm(`${status === "approved" ? "Approve" : "Reject"} the Pro request from ${request.email}?${note}`)) return;
+    setPendingSubId(`req-${request.id}`);
+    setMessage("");
+    try {
+      await callWebloomAdminFunction({ action: "set_subscription_request_status", requestId: request.id, status });
+      setMessage(`Request from ${request.email} ${status}.`);
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The request could not be updated.");
+    } finally {
+      setPendingSubId("");
+    }
+  };
+
   const copyCredential = async () => {
     if (!credential) return;
     try {
@@ -153,6 +200,7 @@ export function AdminDashboard({
   const sharedUsed = Number(storageStats?.used_bytes || 0);
   const sharedLimit = Number(storageStats?.limit_bytes || 0);
   const sharedPercent = sharedLimit > 0 ? Math.min(100, sharedUsed / sharedLimit * 100) : 0;
+  const pendingRequests = subscriptionRequests.filter((request) => request.status === "pending").length;
 
   return (
     <>
@@ -201,7 +249,7 @@ export function AdminDashboard({
         </div>
         <div className="admin-table-scroll">
           <table className="admin-table">
-            <thead><tr><th>Customer</th><th>Joined</th><th>Websites</th><th>Status</th><th>Access controls</th></tr></thead>
+            <thead><tr><th>Customer</th><th>Joined</th><th>Websites</th><th>Status</th><th>Plan</th><th>Access controls</th></tr></thead>
             <tbody>
               {visible.map((customer) => {
                 const isBusy = pendingId === customer.id;
@@ -212,8 +260,13 @@ export function AdminDashboard({
                     <td>{new Date(customer.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</td>
                     <td>{customer.projectCount}</td>
                     <td><span className={`admin-status ${customer.suspended ? "paused" : customer.mustChangePassword ? "setup" : "active"}`}>{status}</span></td>
+                    <td><span className={`admin-status ${customer.plan === "pro" ? "active" : ""}`}>{customer.plan === "pro" ? "Pro" : "Free"}</span></td>
                     <td>
                       <div className="admin-row-actions">
+                        <button className={`admin-row-action ${customer.plan === "pro" ? "pause" : "restore"}`} onClick={() => void setCustomerPlan(customer, customer.plan === "pro" ? "free" : "pro")} disabled={isBusy || pendingSubId === customer.id || customer.id === currentAdminId} title={customer.plan === "pro" ? "Return to the free plan (watermark returns)" : "Grant Pro — removes the watermark from their websites"}>
+                          <Sparkles size={13} />
+                          {pendingSubId === customer.id ? "Updating…" : customer.plan === "pro" ? "Remove Pro" : "Grant Pro"}
+                        </button>
                         <button className={`admin-row-action ${customer.suspended ? "restore" : "pause"}`} onClick={() => void toggleSuspension(customer)} disabled={isBusy || customer.id === currentAdminId} title={customer.id === currentAdminId ? "You cannot pause your own admin account" : undefined}>
                           {customer.suspended ? <CheckCircle2 size={13} /> : <Ban size={13} />}
                           {isBusy ? "Updating…" : customer.suspended ? "Restore" : "Pause"}
@@ -227,11 +280,42 @@ export function AdminDashboard({
                   </tr>
                 );
               })}
-              {!visible.length ? <tr><td colSpan={5} className="admin-empty">No accounts match those filters.</td></tr> : null}
+              {!visible.length ? <tr><td colSpan={6} className="admin-empty">No accounts match those filters.</td></tr> : null}
             </tbody>
           </table>
         </div>
         {totalCustomers > customers.length ? <p className="admin-pagination-note">Showing the latest 200 of {totalCustomers.toLocaleString()} accounts. Narrow your search or use database reports for older records.</p> : null}
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-heading"><div><h2>Subscription requests</h2><p>Customers asking for Pro (watermark removal). Approving a request upgrades that customer instantly.</p></div><span className="admin-list-count">{pendingRequests} pending</span></div>
+        {subscriptionRequests.length ? (
+          <div className="admin-audit-list">
+            {subscriptionRequests.map((request) => (
+              <div key={request.id}>
+                <span className={`admin-audit-dot ${request.status === "rejected" ? "warning" : ""}`} />
+                <span>
+                  <strong>{request.email}</strong>
+                  <small>{request.message ? `“${request.message}” · ` : ""}{new Date(request.createdAt).toLocaleString()}</small>
+                </span>
+                {request.status === "pending" ? (
+                  <span className="admin-row-actions">
+                    <button className="admin-row-action restore" onClick={() => void reviewSubscriptionRequest(request, "approved")} disabled={pendingSubId === `req-${request.id}`} title="Grant Pro and remove their watermark">
+                      {pendingSubId === `req-${request.id}` ? <LoaderCircle size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                      Approve
+                    </button>
+                    <button className="admin-row-action reset" onClick={() => void reviewSubscriptionRequest(request, "rejected")} disabled={pendingSubId === `req-${request.id}`} title="Reject this request">
+                      <X size={13} />
+                      Reject
+                    </button>
+                  </span>
+                ) : (
+                  <span className={`admin-status ${request.status === "approved" ? "active" : "paused"}`}>{request.status}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : <p className="admin-empty">No subscription requests yet. Customers request Pro from their account page.</p>}
       </section>
 
       <section className="admin-card admin-audit-card">

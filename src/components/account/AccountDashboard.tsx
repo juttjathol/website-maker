@@ -3,10 +3,11 @@
 import React, { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Cloud, HardDrive, KeyRound, LoaderCircle, LogOut, RefreshCw, Shield, UserRound } from "lucide-react";
+import { ArrowRight, Cloud, HardDrive, KeyRound, LoaderCircle, LogOut, RefreshCw, Shield, Sparkles, UserRound } from "lucide-react";
 import { syncLocalProjects } from "@/lib/db";
 import { CLOUD_STORAGE_LIMITS, formatBytes } from "@/lib/storage-limits";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { callWebloomAdminFunction } from "@/lib/supabase/admin-functions";
 
 export interface AccountStorageStatus {
   project_count: number;
@@ -26,6 +27,7 @@ export function AccountDashboard({
   projectCount,
   isAdmin,
   isSuspended,
+  plan,
   storageStatus,
 }: {
   userId: string;
@@ -35,6 +37,7 @@ export function AccountDashboard({
   projectCount: number;
   isAdmin: boolean;
   isSuspended: boolean;
+  plan: "free" | "pro";
   storageStatus: AccountStorageStatus | null;
 }) {
   const router = useRouter();
@@ -47,6 +50,24 @@ export function AccountDashboard({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
+  const [upgradeMessage, setUpgradeMessage] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const [requestResult, setRequestResult] = useState("");
+
+  const requestSubscription = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setRequesting(true);
+    setRequestResult("");
+    try {
+      await callWebloomAdminFunction({ action: "request_subscription", message: upgradeMessage.trim().slice(0, 500) });
+      setUpgradeMessage("");
+      setRequestResult("Request sent. Webloom staff will contact you at your account email about a subscription.");
+    } catch (error) {
+      setRequestResult(error instanceof Error ? error.message : "The request could not be sent. Please try again.");
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -121,6 +142,7 @@ export function AccountDashboard({
         <section className="account-card account-profile-card">
           <div className="account-card-heading"><span className="account-card-icon"><UserRound size={18} /></span><div><h2>Profile</h2><p>Your sign-in and display details</p></div></div>
           <div className="account-email-row"><span>Email address</span><strong>{email}</strong><small>Account access granted by Webloom staff</small></div>
+          <div className="account-email-row"><span>Plan</span><strong>{plan === "pro" ? "Webloom Pro" : "Free"}</strong><small>{plan === "pro" ? "No watermark on your published websites" : "A Webloom badge shows on your published websites"}</small></div>
           <form className="account-profile-form" onSubmit={saveProfile}>
             <label htmlFor="account-display-name">Display name</label>
             <input id="account-display-name" maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="What should we call you?" />
@@ -128,6 +150,27 @@ export function AccountDashboard({
           </form>
           <p className="account-created-note">Account created {new Date(createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</p>
         </section>
+
+        {plan === "free" ? (
+          <section className="account-card">
+            <div className="account-card-heading"><span className="account-card-icon"><Sparkles size={18} /></span><div><h2>Webloom Pro</h2><p>Remove the watermark from your website</p></div></div>
+            <p className="account-card-copy">Your free plan shows a small “WEBLOOM by JATHOL” badge at the bottom of your published website. Go Pro to remove it and unlock extra tools.</p>
+            <form className="account-profile-form" onSubmit={requestSubscription}>
+              <label htmlFor="upgrade-email">Your email</label>
+              <input id="upgrade-email" type="email" value={email} readOnly />
+              <label htmlFor="upgrade-message">Anything we should know? (optional)</label>
+              <textarea id="upgrade-message" rows={3} maxLength={500} value={upgradeMessage} onChange={(event) => setUpgradeMessage(event.target.value)} placeholder="Tell us about your website or question" />
+              <button className="btn-app primary" type="submit" disabled={requesting}>{requesting ? <LoaderCircle size={14} className="animate-spin" /> : null}{requesting ? "Sending…" : "Request Webloom Pro"}</button>
+            </form>
+            {requestResult ? <p className="account-inline-result" role="status">{requestResult}</p> : null}
+            <p className="account-created-note">Prefer email? Write to <a href="mailto:contact@jathol.org">contact@jathol.org</a> and we will set up your subscription.</p>
+          </section>
+        ) : (
+          <section className="account-card">
+            <div className="account-card-heading"><span className="account-card-icon"><Sparkles size={18} /></span><div><h2>Webloom Pro</h2><p>Active on your account</p></div></div>
+            <p className="account-card-copy">Your websites publish without the Webloom watermark. Thank you for your subscription.</p>
+          </section>
+        )}
 
         <section className="account-card account-cloud-card">
           <div className="account-card-heading"><span className="account-card-icon cloud"><Cloud size={18} /></span><div><h2>Your cloud workspace</h2><p>Only you can access these websites</p></div></div>

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, LoaderCircle, Sparkles, TriangleAlert } from "lucide-react";
-import { dbGet } from "@/lib/db";
+import { dbGet, getMyPlan } from "@/lib/db";
 import { pageFileName } from "@/lib/tree";
 import type { Page, Project } from "@/lib/schema";
 import { SiteChrome, SiteStyleTag } from "@/components/site/SiteChrome";
@@ -11,6 +11,7 @@ import { SiteBody } from "@/components/site/renderers";
 export default function PreviewPage() {
   const [data, setData] = useState<{ project: Project; page: Page } | null>(null);
   const [error, setError] = useState("");
+  const [watermark, setWatermark] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -22,7 +23,10 @@ export default function PreviewPage() {
       if (!project) { setError("This website is not available in this browser."); return; }
       const pageId = params.get("page");
       const page = project.pages.find((p) => p.id === pageId) || project.pages[0];
-      if (alive && page) setData({ project, page });
+      if (alive && page) {
+      setData({ project, page });
+      setWatermark((await getMyPlan()) !== "pro");
+    }
     };
     void load();
     return () => { alive = false; };
@@ -138,7 +142,7 @@ export default function PreviewPage() {
       </div>
       <div className="preview-site-wrap">
         <SiteStyleTag />
-        <SiteChrome project={data.project}>
+        <SiteChrome project={data.project} watermark={watermark}>
           <SiteBody blocks={data.page.blocks} mode="preview" />
         </SiteChrome>
       </div>

@@ -4,7 +4,7 @@ import { ArrowLeft, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminDashboard, type AdminAuditItem, type AdminCustomer } from "@/components/admin/AdminDashboard";
+import { AdminDashboard, type AdminAuditItem, type AdminCustomer, type AdminSubscriptionRequest } from "@/components/admin/AdminDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +29,15 @@ export default async function AdminPage() {
   // This route is force-dynamic; the admin metric is intentionally relative to request time.
   // eslint-disable-next-line react-hooks/purity
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [customersResult, projectMetricsResult, recentResult, auditsResult, storageStatsResult] = await Promise.all([
-    supabase.from("profiles").select("id,email,display_name,created_at,suspended_at,must_change_password").order("created_at", { ascending: false }).limit(200),
+  const [customersResult, projectMetricsResult, recentResult, auditsResult, storageStatsResult, requestsResult] = await Promise.all([
+    supabase.from("profiles").select("id,email,display_name,created_at,suspended_at,must_change_password,plan").order("created_at", { ascending: false }).limit(200),
     supabase.rpc("admin_project_counts"),
     supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", since),
     supabase.from("audit_logs").select("id,actor_id,action,target_email,created_at").order("created_at", { ascending: false }).limit(20),
     supabase.rpc("admin_storage_stats"),
+    supabase.from("subscription_requests").select("id,user_id,email,message,status,created_at").order("created_at", { ascending: false }).limit(200),
   ]);
-  const queryError = customersResult.error || projectMetricsResult.error || recentResult.error || auditsResult.error || storageStatsResult.error;
+  const queryError = customersResult.error || projectMetricsResult.error || recentResult.error || auditsResult.error || storageStatsResult.error || requestsResult.error;
   if (queryError) {
     const errorDetail = [
       queryError.code ? `Code: ${queryError.code}` : "",
@@ -58,6 +59,15 @@ export default async function AdminPage() {
     suspended: Boolean(customer.suspended_at),
     mustChangePassword: Boolean(customer.must_change_password),
     projectCount: counts.get(customer.id) || 0,
+    plan: customer.plan === "pro" ? "pro" : "free",
+  }));
+  const subscriptionRequests: AdminSubscriptionRequest[] = (requestsResult.data || []).map((request) => ({
+    id: Number(request.id),
+    userId: request.user_id || "",
+    email: request.email,
+    message: request.message || "",
+    status: request.status === "approved" ? "approved" : request.status === "rejected" ? "rejected" : "pending",
+    createdAt: request.created_at,
   }));
   const audit: AdminAuditItem[] = (auditsResult.data || []).map((item) => ({
     id: item.id,
@@ -80,6 +90,7 @@ export default async function AdminPage() {
           audit={audit}
           currentAdminId={user.id}
           storageStats={storageStatsResult.data?.[0] || null}
+          subscriptionRequests={subscriptionRequests}
         />
       </div>
     </main>

@@ -28,7 +28,7 @@ export default async function AccountPage() {
   if (!user) redirect("/sign-in?next=%2Faccount");
 
   const [{ data: profile }, { count: projectCount }, { data: admin }, { data: storageRows }] = await Promise.all([
-    supabase.from("profiles").select("display_name,suspended_at,created_at").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("display_name,suspended_at,created_at,plan").eq("id", user.id).maybeSingle(),
     supabase.from("projects").select("id", { count: "exact", head: true }),
     supabase.rpc("is_platform_admin"),
     supabase.rpc("webloom_cloud_storage_status"),
@@ -53,6 +53,7 @@ export default async function AccountPage() {
           projectCount={projectCount || 0}
           isAdmin={admin === true}
           isSuspended={Boolean(profile?.suspended_at)}
+          plan={profile?.plan === "pro" ? "pro" : "free"}
           storageStatus={storageRows?.[0] || null}
         />
       </div>

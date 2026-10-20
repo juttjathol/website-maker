@@ -8,6 +8,7 @@ import type { Page, Project } from "@/lib/schema";
 import { themeVars, themeFontClass, SITE_JS } from "@/lib/export";
 import { SITE_CSS } from "@/lib/site-css";
 import { SiteBody } from "./renderers";
+import { Watermark } from "./Watermark";
 
 export function SiteStyleTag() {
   return <style dangerouslySetInnerHTML={{ __html: SITE_CSS }} />;
@@ -16,9 +17,12 @@ export function SiteStyleTag() {
 export function SiteChrome({
   project,
   children,
+  watermark = false,
 }: {
   project: Project;
   children: React.ReactNode;
+  /** Show the free-plan "WEBLOOM by JATHOL" bubble */
+  watermark?: boolean;
 }) {
   return (
     <div
@@ -26,12 +30,13 @@ export function SiteChrome({
       style={themeVars(project.theme)}
     >
       {children}
+      {watermark ? <Watermark /> : null}
     </div>
   );
 }
 
 /** Full static page renderer used by /preview (includes runtime script) */
-export function SiteStaticView({ project, page }: { project: Project; page: Page }) {
+export function SiteStaticView({ project, page, watermark = false }: { project: Project; page: Page; watermark?: boolean }) {
   return (
     <>
       <SiteStyleTag />
@@ -40,6 +45,7 @@ export function SiteStaticView({ project, page }: { project: Project; page: Page
         style={themeVars(project.theme)}
       >
         <SiteBody blocks={page.blocks} mode="static" />
+        {watermark ? <Watermark /> : null}
       </div>
       <script dangerouslySetInnerHTML={{ __html: SITE_JS }} />
     </>

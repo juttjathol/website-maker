@@ -3,6 +3,7 @@
 import JSZip from "jszip";
 import type { Block, Page, Project } from "./schema";
 import { renderPageHtml, SITE_JS } from "./export";
+import { getMyPlan } from "./db";
 import { SITE_CSS } from "./site-css";
 import { pageFileName, walkBlocks } from "./tree";
 import { downloadBlob, escapeHtml } from "./util";
@@ -75,8 +76,8 @@ body{margin:0;color:var(--store-ink);background:var(--store-background,#fff);fon
 @media(max-width:560px){.shop-product-grid{gap:10px}.shop-cart-list th:nth-child(2),.shop-cart-list td:nth-child(2){display:none}.shop-cart-item img{width:56px;height:56px}.shop-cart-list th,.shop-cart-list td{padding:10px 5px}.shop-search-form{flex-direction:column}.shop-collection-list{grid-template-columns:1fr}.webloom-shop-actions a{font-size:11px}}
 `;
 
-function htmlBody(project: Project, page: Page, blocks: Block[]): string {
-  const rendered = renderPageHtml(project, { ...page, blocks });
+function htmlBody(project: Project, page: Page, blocks: Block[], watermark = false): string {
+  const rendered = renderPageHtml(project, { ...page, blocks }, { watermark });
   const startMarker = "<body>\n";
   const endMarker = "\n<script src=\"assets/site.js\"></script>";
   const start = rendered.indexOf(startMarker);
@@ -273,14 +274,14 @@ function themeInfo(name: string) {
   ];
 }
 
-function shopHeaderMarkup(project: Project, page: Page): string {
+function shopHeaderMarkup(project: Project, page: Page, watermark: boolean): string {
   const navbar = findChromeBlock(page, "navbar");
-  return navbar ? htmlBody(project, page, [navbar]) : fallbackHeader(project);
+  return navbar ? htmlBody(project, page, [navbar], watermark) : fallbackHeader(project);
 }
 
-function shopFooterMarkup(project: Project, page: Page): string {
+function shopFooterMarkup(project: Project, page: Page, watermark: boolean): string {
   const footer = findChromeBlock(page, "footer");
-  return footer ? htmlBody(project, page, [footer]) : fallbackFooter(project);
+  return footer ? htmlBody(project, page, [footer], watermark) : fallbackFooter(project);
 }
 
 function makeLiquidSettingContent(rawMarkup: string, project: Project, sourceNames: Map<string, string>, addStoreActions = false): string {
@@ -499,10 +500,10 @@ ${simpleSchema("Collections list")}
   };
 }
 
-function addJsonTemplates(files: Map<string, ThemeFile>, pages: Page[], project: Project, sourceNames: Map<string, string>) {
+function addJsonTemplates(files: Map<string, ThemeFile>, pages: Page[], project: Project, sourceNames: Map<string, string>, watermark: boolean) {
   files.set("templates/index.json", JSON.stringify({
     sections: {
-      main: { type: "webloom-liquid", settings: { markup: makeLiquidSettingContent(htmlBody(project, pages[0], pages[0].blocks.filter((b) => b.type !== "navbar" && b.type !== "footer")), project, sourceNames) } },
+      main: { type: "webloom-liquid", settings: { markup: makeLiquidSettingContent(htmlBody(project, pages[0], pages[0].blocks.filter((b) => b.type !== "navbar" && b.type !== "footer"), watermark), project, sourceNames) } },
       products: { type: "featured-products", settings: { heading: "Shop the collection", products_to_show: 4 } },
     },
     order: ["main", "products"],
@@ -521,7 +522,7 @@ function addJsonTemplates(files: Map<string, ThemeFile>, pages: Page[], project:
   for (let index = 1; index < pages.length; index++) {
     const page = pages[index];
     const handle = shopifyPageHandle(page, pages);
-    const setting = makeLiquidSettingContent(htmlBody(project, page, page.blocks.filter((b) => b.type !== "navbar" && b.type !== "footer")), project, sourceNames);
+    const setting = makeLiquidSettingContent(htmlBody(project, page, page.blocks.filter((b) => b.type !== "navbar" && b.type !== "footer"), watermark), project, sourceNames);
     files.set(`templates/page.webloom-${handle}.json`, jsonTemplate("webloom-liquid", { markup: setting }));
   }
 }
@@ -566,6 +567,7 @@ export async function buildShopifyThemeFiles(project: Project): Promise<Map<stri
   const firstPage = pages[0];
   const { assets, sourceNames } = await collectThemeImages(project);
   const files = new Map<string, ThemeFile>();
+  const watermark = (await getMyPlan()) !== "pro";
 
   files.set("layout/theme.liquid", makeThemeLayout(project));
   files.set("assets/webloom.css", SITE_CSS);
@@ -580,8 +582,8 @@ export async function buildShopifyThemeFiles(project: Project): Promise<Map<stri
   for (const [filename, source] of Object.entries(makeCommerceSections())) files.set(`sections/${filename}`, source);
   files.set("snippets/product-card.liquid", makeProductCardSnippet());
 
-  const headerMarkup = makeLiquidSettingContent(shopHeaderMarkup(project, firstPage), project, sourceNames, true);
-  const footerMarkup = makeLiquidSettingContent(shopFooterMarkup(project, firstPage), project, sourceNames);
+  const headerMarkup = makeLiquidSettingContent(shopHeaderMarkup(project, firstPage, watermark), project, sourceNames, true);
+  const footerMarkup = makeLiquidSettingContent(shopFooterMarkup(project, firstPage, watermark), project, sourceNames);
   files.set("sections/header-group.json", JSON.stringify({
     type: "header",
     name: "Header group",
@@ -595,7 +597,7 @@ export async function buildShopifyThemeFiles(project: Project): Promise<Map<stri
     order: ["footer"],
   }, null, 2));
 
-  addJsonTemplates(files, pages, project, sourceNames);
+  addJsonTemplates(files, pages, project, sourceNames, watermark);
   files.set("config/settings_schema.json", JSON.stringify(themeInfo(`Webloom — ${project.name}`), null, 2));
   files.set("config/settings_data.json", JSON.stringify({
     current: { color_primary: safeColor(project.theme.primary, "#6d5ae6"), color_surface: safeColor(project.theme.surface, "#f7f5fa") },

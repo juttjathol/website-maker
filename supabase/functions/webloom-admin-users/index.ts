@@ -12,11 +12,19 @@ type ActionBody = {
   action?:
     | "create_customer"
     | "reset_customer_password"
-    | "complete_first_password_change";
+    | "complete_first_password_change"
+    | "request_subscription"
+    | "list_subscription_requests"
+    | "set_subscription_request_status"
+    | "set_user_plan";
   email?: string;
   name?: string;
   userId?: string;
   newPassword?: string;
+  message?: string;
+  requestId?: number;
+  status?: string;
+  plan?: string;
 };
 
 function json(status: number, body: Record<string, unknown>) {
@@ -128,6 +136,23 @@ Deno.serve(async (request: Request) => {
     }
 
     return json(200, { ok: true });
+  }
+
+  // Any signed-in customer may ask for a Pro subscription. The request is
+  // tied to their verified account email so staff can contact them.
+  if (body.action === "request_subscription") {
+    const message = String(body.message || "").trim().slice(0, 500);
+    if (!caller.email) {
+      return json(400, { error: "Your account does not have an email address." });
+    }
+    const { error: requestError } = await adminClient
+      .from("subscription_requests")
+      .insert({ user_id: caller.id, email: caller.email, message, status: "pending" });
+    if (requestError) {
+      console.error("Unable to record subscription request", requestError.message);
+      return json(500, { error: "The subscription request could not be saved. Please try again." });
+    }
+    return json(201, { ok: true });
   }
 
   const { data: adminRecord, error: adminLookupError } = await adminClient
@@ -291,6 +316,52 @@ Deno.serve(async (request: Request) => {
       user: { id: userId, email: target.email || "" },
       temporaryPassword: password,
     });
+  }
+
+  if (body.action === "list_subscription_requests") {
+    const { data: requests, error: requestsError } = await adminClient
+      .from("subscription_requests")
+      .select("id,user_id,email,message,status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (requestsError) {
+      return json(500, { error: "Subscription requests could not be loaded." });
+    }
+    return json(200, { ok: true, requests: requests || [] });
+  }
+
+  if (body.action === "set_subscription_request_status") {
+    const requestId = Number(body.requestId);
+    const status = body.status === "approved" ? "approved" : "rejected";
+    if (!Number.isInteger(requestId) || requestId <= 0) {
+      return json(400, { error: "Choose a valid subscription request." });
+    }
+    const { error: statusError } = await adminClient.rpc(
+      "admin_set_subscription_request_status",
+      { p_request_id: requestId, p_status: status },
+    );
+    if (statusError) {
+      return json(400, { error: statusError.message || "The request could not be updated." });
+    }
+    return json(200, { ok: true });
+  }
+
+  if (body.action === "set_user_plan") {
+    const targetUserId = body.userId || "";
+    const targetPlan = body.plan === "pro" ? "pro" : "free";
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetUserId)
+    ) {
+      return json(400, { error: "Choose a valid customer account." });
+    }
+    const { error: planError } = await adminClient.rpc("admin_set_user_plan", {
+      p_user_id: targetUserId,
+      p_plan: targetPlan,
+    });
+    if (planError) {
+      return json(400, { error: planError.message || "The subscription could not be updated." });
+    }
+    return json(200, { ok: true });
   }
 
   return json(400, { error: "Unknown action." });

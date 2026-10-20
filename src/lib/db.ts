@@ -284,6 +284,19 @@ export async function dbDelete(id: string): Promise<void> {
   clearLocalOwner(id);
 }
 
+/** The signed-in owner's subscription plan. Guests and unknown users are "free". */
+export async function getMyPlan(): Promise<"free" | "pro"> {
+  const context = await getCloudContext();
+  if (!context) return "free";
+  const { data, error } = await context.client
+    .from("profiles")
+    .select("plan")
+    .eq("id", context.userId)
+    .maybeSingle();
+  if (error || !data) return "free";
+  return data.plan === "pro" ? "pro" : "free";
+}
+
 /** Explicitly copy guest drafts from this browser into the currently signed-in account. */
 export async function syncLocalProjects(): Promise<number> {
   const context = await getCloudContext();

@@ -9,6 +9,7 @@ import JSZip from "jszip";
 import type { Block, Page, Project } from "./schema";
 import { SiteBody } from "@/components/site/renderers";
 import { SITE_CSS } from "./site-css";
+import { getMyPlan } from "./db";
 import { pageFileName, walkBlocks } from "./tree";
 import { downloadBlob, escapeAttr, escapeHtml } from "./util";
 
@@ -101,14 +102,28 @@ function faviconSvg(theme: Project["theme"]): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-export function renderPageHtml(project: Project, page: Page): string {
+/** Watermark HTML for free-plan static exports (matches <Watermark/>). */
+export function watermarkHtml(): string {
+  return `<div class="wk-watermark" aria-hidden="true"><span class="wk-watermark-dot"></span><span class="wk-watermark-text">WEBLOOM <b>by JATHOL</b></span></div>`;
+}
+
+export function renderPageHtml(project: Project, page: Page, opts: { watermark?: boolean } = {}): string {
   const title = page.seo?.title || project.seo?.title || project.name;
   const description = page.seo?.description || project.seo?.description || "";
   const inner = renderToStaticMarkup(
     React.createElement(
       "div",
       { className: `wk-site ${themeFontClass(project.theme.font)}`, style: themeVars(project.theme) },
-      React.createElement(SiteBody as any, { blocks: page.blocks, mode: "static" as const })
+      React.createElement(SiteBody as any, { blocks: page.blocks, mode: "static" as const }),
+      opts.watermark ? React.createElement("div", {
+        className: "wk-watermark",
+        "aria-hidden": true,
+      },
+        React.createElement("span", { className: "wk-watermark-dot" }),
+        React.createElement("span", { className: "wk-watermark-text" },
+          "WEBLOOM ",
+          React.createElement("b", null, "by JATHOL")))
+      : null
     )
   );
 
@@ -228,6 +243,9 @@ export async function exportProjectZip(project: Project): Promise<void> {
   const zip = new JSZip();
   const imgFolder = zip.folder("assets");
 
+  /* Free owners keep the watermark; Pro owners export without it. */
+  const watermark = (await getMyPlan()) !== "pro";
+
   /* harvest + download local images, build rewrite map */
   const images = new Set<string>();
   for (const page of project.pages) collectImages(page.blocks, images);
@@ -246,7 +264,7 @@ export async function exportProjectZip(project: Project): Promise<void> {
 
   /* pages */
   for (const page of project.pages) {
-    let html = renderPageHtml(project, page);
+    let html = renderPageHtml(project, page, { watermark });
     for (const [from, to] of rewrite) {
       html = html.split(`src="${from}"`).join(`src="${to}"`);
     }

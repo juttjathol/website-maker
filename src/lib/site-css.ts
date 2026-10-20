@@ -294,6 +294,11 @@ a{color:inherit}
 @keyframes wkfade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* ---------- free-plan watermark ---------- */
+.wk-watermark{position:fixed;right:14px;bottom:14px;z-index:9999;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;background:rgba(20,16,38,.85);color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;box-shadow:0 6px 18px rgba(20,16,38,.28);backdrop-filter:blur(6px);pointer-events:none;line-height:1}
+.wk-watermark-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#8d7bf1,#6d5ae6);flex:none}
+.wk-watermark-text b{font-weight:800}
+
 /* ---------- editor-only chrome never exported ---------- */
 .wk-empty-drop{border:2px dashed color-mix(in srgb,var(--wk-primary) 45%,transparent);border-radius:var(--wk-radius);padding:46px 20px;text-align:center;color:var(--wk-muted);background:color-mix(in srgb,var(--wk-primary) 5%,transparent)}
 `;
