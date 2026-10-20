@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   distDir: ".next-node",
   reactStrictMode: true,
   devIndicators: false,
+  // Cloudflare Workers has no Node image-optimization runtime (sharp), so
+  // /_next/image can only fall back to a redirect. Serve originals directly.
+  images: { unoptimized: true },
 };
 
 export default nextConfig;
