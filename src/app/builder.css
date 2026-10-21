@@ -1,5 +1,6 @@
 /* Builder chrome is separate from exported SITE_CSS. Keep the editing UI out of ZIPs. */
 .btn-app{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #e3dfed;border-radius:9px;padding:9px 13px;font-size:12px;font-weight:750;line-height:1.3;text-decoration:none;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.builder-shell button:focus-visible,.builder-shell a:focus-visible{outline:2px solid #8b5cf6;outline-offset:3px}
 .btn-app.primary{background:#6d5ae6;color:white;border-color:#6d5ae6}
 .btn-app.primary:hover{background:#5a47d0}
 .btn-app.ghost{background:white;color:#625a7a}
