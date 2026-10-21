@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import type { Project } from "@/lib/schema";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
+import { applyPromptToProject } from "@/lib/text-to-build";
 import { dbDelete, dbGetAll, dbPut, syncLocalProjects } from "@/lib/db";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -25,6 +27,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("My new website");
+  const [aiPrompt, setAiPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
@@ -77,7 +80,13 @@ export default function ProjectsPage() {
 
   const createBlank = async () => {
     setBusy(true);
-    const project = newProject(newName.trim() || "My new website");
+    let project = newProject(newName.trim() || "My new website");
+    if (aiPrompt.trim()) {
+      project = applyPromptToProject(project, aiPrompt.trim(), { forceFullBuild: true }).project;
+      if (newName.trim() && newName.trim() !== "My new website") {
+        project.name = newName.trim();
+      }
+    }
     await dbPut(project);
     router.push(`/builder?project=${encodeURIComponent(project.id)}`);
   };
@@ -124,7 +133,7 @@ export default function ProjectsPage() {
       <header className="border-b border-[#ebe8f2] bg-white">
         <div className="mx-auto flex h-[68px] max-w-6xl items-center px-5">
           <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#6d5ae6] text-white"><Sparkles size={16} /></span>
+            <BrandMark size={32} />
             {BRAND.name}
           </Link>
           <nav className="ml-auto flex items-center gap-2">
@@ -228,7 +237,20 @@ export default function ProjectsPage() {
             </div>
             <label className="mt-5 block text-xs font-bold text-[#514b68]">Give your project a name</label>
             <input className="inspector-input mt-1.5 !py-2.5 !text-sm" value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void createBlank(); }} autoFocus />
-            <button className="btn-app primary mt-3 w-full !justify-center !py-3" onClick={() => void createBlank()} disabled={busy}><Plus size={15} /> Create a website with a sample page</button>
+            <label className="mt-3.5 flex items-center gap-1.5 text-xs font-bold text-[#514b68]">
+              <Sparkles size={13} className="text-[#6d5ae6]" /> Describe your website (optional — Text-to-Build)
+            </label>
+            <textarea
+              rows={2}
+              className="inspector-input mt-1.5 !text-xs"
+              placeholder="e.g. A cozy bakery with warm espresso colors, menu, customer reviews & contact form"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+            />
+            <button className="btn-app primary mt-3 w-full !justify-center !py-3" onClick={() => void createBlank()} disabled={busy}>
+              {aiPrompt.trim() ? <Sparkles size={15} /> : <Plus size={15} />}
+              {aiPrompt.trim() ? "Build website from description" : "Create a website with a sample page"}
+            </button>
             <div className="my-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-[#aaa4b9]"><span className="h-px flex-1 bg-[#eceaf4]" /> OR PICK A TEMPLATE <span className="h-px flex-1 bg-[#eceaf4]" /></div>
             <div className="grid grid-cols-2 gap-2">
               {TEMPLATES.slice(0, 4).map((tpl) => (

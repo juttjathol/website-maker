@@ -9,7 +9,18 @@ export default defineConfig({
     assets: {
       htmlHandling: "none",
       notFoundHandling: "none",
-      runWorkerFirst: ["/*", "!/_next/static/*", "!/*/_next/static/*"],
+      runWorkerFirst: [
+        "/*",
+        "!/_next/static/*",
+        "!/*/_next/static/*",
+        "!/favicon.ico",
+        "!/favicon.svg",
+        "!/favicon.png",
+        "!/apple-touch-icon.png",
+        "!/logo.png",
+        "!/logo-badge.png",
+        "!/images/*",
+      ],
     },
     env: {
       ASSETS: bindings.assets(),

@@ -8,7 +8,7 @@ import { Scene3DInspector } from "./Scene3DInspector";
 import { FieldRow } from "./Field";
 import { Icon } from "@/components/site/icons";
 import { cx } from "@/lib/util";
-import { Copy, Eye, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Eye, Trash2 } from "lucide-react";
 
 
 
@@ -21,6 +21,7 @@ export function Inspector({ project }: { project: Project }) {
   const rename = useEditor((s) => s.renameProject);
   const remove = useEditor((s) => s.removeBlockById);
   const duplicate = useEditor((s) => s.duplicateBlockById);
+  const nudge = useEditor((s) => s.nudgeBlock);
   const page = project.pages.find((p) => p.id === currentPageId) || project.pages[0];
   const isHomePage = page?.id === project.pages[0]?.id;
   const selected = page && selectedId ? findBlock(page.blocks, selectedId)?.block ?? null : null;
@@ -45,6 +46,8 @@ export function Inspector({ project }: { project: Project }) {
               <h2 className="truncate text-sm font-extrabold">{def.label}</h2>
               <p className="truncate text-[10.5px] text-[#8d85ab]">{def.description}</p>
             </div>
+            <button className="icon-button" title="Move block up" onClick={() => nudge(selected.id, -1)}><ArrowUp size={14} /></button>
+            <button className="icon-button" title="Move block down" onClick={() => nudge(selected.id, 1)}><ArrowDown size={14} /></button>
             <button className="icon-button" title="Duplicate block" onClick={() => duplicate(selected.id)}><Copy size={14} /></button>
             <button className="icon-button danger" title="Delete block" onClick={() => remove(selected.id)}><Trash2 size={14} /></button>
           </div>
@@ -149,6 +152,28 @@ function StyleEditor({ block, onChange }: { block: { style: BlockStyle }; onChan
 
   return (
     <div className="space-y-5 p-4">
+      <div>
+        <label className="inspector-label">Quick section looks</label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { label: "Theme Default", patch: { backgroundColor: undefined, textColor: undefined, accentColor: undefined } },
+            { label: "Soft Lavender", patch: { backgroundColor: "#f6f4fe", textColor: "#1d1733", accentColor: "#6d5ae6" } },
+            { label: "Dark Spotlight", patch: { backgroundColor: "#120f24", textColor: "#f8f6ff", accentColor: "#a78bfa" } },
+            { label: "Warm Sand", patch: { backgroundColor: "#fbf7f0", textColor: "#261b12", accentColor: "#c25e2e" } },
+            { label: "Compact Space", patch: { paddingTop: 28, paddingBottom: 28 } },
+            { label: "Generous Space", patch: { paddingTop: 88, paddingBottom: 88 } },
+          ].map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => onChange(preset.patch)}
+              className="rounded-lg border border-[#e5e0f2] bg-white px-2.5 py-1.5 text-left text-[11px] font-semibold text-[#3f3859] transition hover:border-[#6d5ae6] hover:bg-[#f5f2ff]"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div>
         <label className="inspector-label">Text alignment</label>
         <div className="grid grid-cols-3 gap-1 rounded-lg bg-[#f1eff8] p-1">

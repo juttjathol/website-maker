@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, LoaderCircle, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ExternalLink, LoaderCircle, TriangleAlert } from "lucide-react";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { dbGet, getMyPlan } from "@/lib/db";
 import { pageFileName } from "@/lib/tree";
 import type { Page, Project } from "@/lib/schema";
@@ -132,7 +133,7 @@ export default function PreviewPage() {
     <main className="preview-page">
       <div className="preview-topbar">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="preview-w-mark"><Sparkles size={13} /></span>
+          <BrandMark size={28} />
           <strong className="truncate">{data.project.name}</strong>
           <span className="preview-page-label">· {data.page.name} preview</span>
         </div>

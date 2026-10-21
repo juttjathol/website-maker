@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, Check, Eye, LoaderCircle, Rocket, Sparkles, X } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { TEMPLATES, type TemplateInfo } from "@/lib/templates";
 import type { Project } from "@/lib/schema";
 import { dbPut } from "@/lib/db";
@@ -54,7 +55,7 @@ export default function TemplatesPage() {
       <header className="sticky top-0 z-40 border-b border-[#ebe8f2] bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-[68px] max-w-6xl items-center px-5">
           <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#6d5ae6] text-white"><Sparkles size={16} /></span>
+            <BrandMark size={32} />
             {BRAND.name}
           </Link>
           <nav className="ml-auto flex items-center gap-2">

@@ -6,10 +6,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEditor } from "@/lib/store";
 import type { Block, BlockType, Project } from "@/lib/schema";
 import { BLOCKS, BLOCK_LIST } from "@/lib/registry";
+import { SECTION_STARTERS, THEME_PRESETS } from "@/lib/text-to-build";
 import { Icon } from "@/components/site/icons";
 import { cx } from "@/lib/util";
+import { ChatBuilderPanel } from "./ChatBuilderPanel";
 import {
-  ChevronDown, ChevronRight, GripVertical, Layers3, Plus, Search, Trash2,
+  ArrowDown, ArrowUp, ChevronDown, ChevronRight, GripVertical, Layers3,
+  Plus, Search, Sparkles, Trash2, Wand2,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -18,7 +21,7 @@ const CATEGORIES = [
   { id: "layout", label: "Layout" },
 ] as const;
 
-type Tab = "add" | "layers" | "pages" | "theme";
+type Tab = "chat" | "add" | "layers" | "pages" | "theme";
 
 function DraggableBlock({
   type,
@@ -77,9 +80,10 @@ function LayerRows({
   const selectedId = useEditor((s) => s.selectedId);
   const removeBlock = useEditor((s) => s.removeBlockById);
   const duplicateBlock = useEditor((s) => s.duplicateBlockById);
+  const nudgeBlock = useEditor((s) => s.nudgeBlock);
   return (
     <div className="space-y-0.5">
-      {blocks.map((block) => {
+      {blocks.map((block, index) => {
         const def = BLOCKS[block.type];
         return (
           <React.Fragment key={block.id}>
@@ -94,6 +98,22 @@ function LayerRows({
               {block.children?.length ? <ChevronDown size={12} className="flex-none text-[#9e97b6]" /> : <span className="w-3 flex-none" />}
               <Icon name={def?.icon || "Layers3"} size={14} />
               <span className="min-w-0 flex-1 truncate">{def?.label || block.type}</span>
+              <button
+                className="layer-action"
+                title="Move up"
+                disabled={index === 0}
+                onClick={(e) => { e.stopPropagation(); nudgeBlock(block.id, -1); }}
+              >
+                <ArrowUp size={11} />
+              </button>
+              <button
+                className="layer-action"
+                title="Move down"
+                disabled={index === blocks.length - 1}
+                onClick={(e) => { e.stopPropagation(); nudgeBlock(block.id, 1); }}
+              >
+                <ArrowDown size={11} />
+              </button>
               <button
                 className="layer-action"
                 title="Duplicate"
@@ -119,13 +139,22 @@ function LayerRows({
   );
 }
 
-export function LeftPanel({ project }: { project: Project }) {
+export function LeftPanel({
+  project,
+  initialPrompt,
+  onPromptConsumed,
+}: {
+  project: Project;
+  initialPrompt?: string;
+  onPromptConsumed?: () => void;
+}) {
   const plan = useEditor((s) => s.plan);
   const tab = useEditor((s) => s.leftTab);
   const setTab = useEditor((s) => s.setLeftTab);
   const pageId = useEditor((s) => s.currentPageId);
   const setPage = useEditor((s) => s.setCurrentPage);
   const addBlock = useEditor((s) => s.addBlock);
+  const addSectionBundle = useEditor((s) => s.addSectionBundle);
   const select = useEditor((s) => s.select);
   const removePage = useEditor((s) => s.removePage);
   const addPage = useEditor((s) => s.addPage);
@@ -148,13 +177,14 @@ export function LeftPanel({ project }: { project: Project }) {
 
   const chooseLayer = (id: string) => {
     select(id);
-      document.querySelector(`[data-block-id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelector(`[data-block-id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   return (
     <aside className="panel panel-left flex flex-col">
-      <div className="flex border-b border-[#e7e4f0] px-2 pt-2">
+      <div className="flex border-b border-[#e7e4f0] px-1.5 pt-2">
         {([
+          ["chat", "✨ Chat"],
           ["add", "Add"],
           ["layers", "Layers"],
           ["pages", "Pages"],
@@ -166,8 +196,34 @@ export function LeftPanel({ project }: { project: Project }) {
         ))}
       </div>
 
+      {tab === "chat" ? (
+        <ChatBuilderPanel
+          project={project}
+          initialPrompt={initialPrompt}
+          onPromptConsumed={onPromptConsumed}
+        />
+      ) : null}
+
       {tab === "add" ? (
         <div className="p-3">
+          {/* Quick link to AI Text-to-Build */}
+          <button
+            type="button"
+            onClick={() => setTab("chat")}
+            className="mb-3 flex w-full items-center justify-between gap-2 rounded-xl border border-[#d9d0fb] bg-gradient-to-r from-[#f4f1ff] to-[#fff5ef] px-3 py-2.5 text-left transition hover:border-[#6d5ae6]"
+          >
+            <span className="flex items-center gap-2">
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#6d5ae6] text-white">
+                <Wand2 size={14} />
+              </span>
+              <span>
+                <strong className="block text-[11.5px] font-extrabold text-[#231c3a]">Text-to-Build AI Chat</strong>
+                <small className="block text-[10px] text-[#6d648b]">Describe your site &amp; it builds itself</small>
+              </span>
+            </span>
+            <Sparkles size={14} className="text-[#6d5ae6]" />
+          </button>
+
           <div className="relative mb-3">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9992b1]" />
             <input
@@ -177,6 +233,29 @@ export function LeftPanel({ project }: { project: Project }) {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+
+          {!query ? (
+            <div className="mb-3.5 rounded-xl border border-[#e9e4f4] bg-[#faf9fe] p-2.5">
+              <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-[#7e759b]">
+                Quick Section Combos
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {SECTION_STARTERS.map((pack) => (
+                  <button
+                    key={pack.id}
+                    type="button"
+                    onClick={() => addSectionBundle(pack.blocks)}
+                    title={pack.description}
+                    className="rounded-lg border border-[#e3ddf2] bg-white px-2 py-1.5 text-left transition hover:border-[#6d5ae6] hover:bg-[#f5f2ff]"
+                  >
+                    <strong className="block truncate text-[10.5px] font-bold text-[#2f2848]">+ {pack.label}</strong>
+                    <span className="block truncate text-[9.5px] text-[#857d9f]">{pack.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mb-3 rounded-lg bg-[#f7f5fd] px-2.5 py-2 text-[11px] leading-relaxed text-[#716b89]">
             Click <strong>+</strong> to add a block, or drag the grip onto your page.
           </div>
@@ -216,7 +295,7 @@ export function LeftPanel({ project }: { project: Project }) {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold">Page layers</h2>
-              <p className="mt-0.5 text-[11px] text-[#8d85ab]">Select a part to edit it</p>
+              <p className="mt-0.5 text-[11px] text-[#8d85ab]">Select, reorder or duplicate sections</p>
             </div>
             <span className="rounded-full bg-[#efedfc] px-2 py-1 text-[10px] font-bold text-[#6d5ae6]">{page?.blocks.length ?? 0} blocks</span>
           </div>
@@ -291,8 +370,50 @@ export function LeftPanel({ project }: { project: Project }) {
         <div className="space-y-5 p-3">
           <div>
             <h2 className="text-sm font-bold">Your design style</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#8d85ab]">Change the whole site’s colors and fonts in one place.</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#8d85ab]">Pick a one-click designer palette or fine-tune colors below.</p>
           </div>
+
+          <div>
+            <label className="inspector-label">One-click brand styles</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {THEME_PRESETS.map((preset) => {
+                const isActive =
+                  project.theme.primary.toLowerCase() === preset.theme.primary.toLowerCase() &&
+                  project.theme.background.toLowerCase() === preset.theme.background.toLowerCase();
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setTheme(preset.theme)}
+                    className={cx(
+                      "rounded-xl border p-2 text-left transition",
+                      isActive
+                        ? "border-[#6d5ae6] bg-[#f4f1ff] shadow-xs"
+                        : "border-[#e6e1f2] bg-white hover:border-[#b7aaf0]"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: preset.theme.background }}
+                      />
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: preset.theme.primary }}
+                      />
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/10"
+                        style={{ background: preset.theme.accent }}
+                      />
+                    </div>
+                    <div className="mt-1.5 truncate text-[11px] font-bold text-[#251f3b]">{preset.name}</div>
+                    <div className="truncate text-[9.5px] text-[#7c7498]">{preset.tagline}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="inspector-label">Color mode</label>
             <div className="grid grid-cols-2 gap-2">

@@ -31,10 +31,13 @@ export default function BuilderPage() {
             return;
           }
         } else {
-          if (!bootstrapPromise) {
+          const promptParam = params.get("prompt");
+          if (!bootstrapPromise || promptParam) {
             const created = newProject("My new website");
             id = created.id;
-            window.history.replaceState(null, "", `/builder?project=${encodeURIComponent(created.id)}`);
+            const nextParams = new URLSearchParams(window.location.search);
+            nextParams.set("project", created.id);
+            window.history.replaceState(null, "", `/builder?${nextParams.toString()}`);
             const task = dbPut(created).then(() => created);
             bootstrapPromise = task;
             pendingProjects.set(created.id, task);

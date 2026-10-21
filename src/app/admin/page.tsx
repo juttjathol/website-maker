@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { AdminDashboard, type AdminAuditItem, type AdminCustomer, type AdminSubscriptionRequest } from "@/components/admin/AdminDashboard";
@@ -79,7 +80,7 @@ export default async function AdminPage() {
 
   return (
     <main className="admin-page-shell">
-      <header className="admin-page-header"><Link href="/" className="account-auth-brand"><span><Sparkles size={16} /></span>{BRAND.name}<span className="admin-brand-badge">STAFF</span></Link><Link href="/account" className="btn-app ghost"><ArrowLeft size={14} /> Account</Link></header>
+      <header className="admin-page-header"><Link href="/" className="account-auth-brand"><BrandMark size={32} />{BRAND.name}<span className="admin-brand-badge">STAFF</span></Link><Link href="/account" className="btn-app ghost"><ArrowLeft size={14} /> Account</Link></header>
       <div className="admin-page-content">
         <div className="admin-page-title"><div><p className="account-eyebrow">WEBLOOM OPERATIONS</p><h1>Customer dashboard</h1><p>Review account health, cloud projects and recent staff actions.</p></div><span className="account-status-pill"><ShieldCheck size={14} /> Admin access verified</span></div>
         <AdminDashboard
@@ -100,7 +101,7 @@ export default async function AdminPage() {
 function AdminNotice({ title, text, detail }: { title: string; text: string; detail?: string }) {
   return (
     <main className="admin-page-shell">
-      <header className="admin-page-header"><Link href="/" className="account-auth-brand"><span><Sparkles size={16} /></span>{BRAND.name}<span className="admin-brand-badge">STAFF</span></Link><Link href="/account" className="btn-app ghost"><ArrowLeft size={14} /> Account</Link></header>
+      <header className="admin-page-header"><Link href="/" className="account-auth-brand"><BrandMark size={32} />{BRAND.name}<span className="admin-brand-badge">STAFF</span></Link><Link href="/account" className="btn-app ghost"><ArrowLeft size={14} /> Account</Link></header>
       <section className="admin-notice-card"><div className="account-auth-icon"><LockKeyhole size={22} /></div><h1>{title}</h1><p>{text}</p>{detail ? <pre className="admin-error-detail">{detail}</pre> : null}<Link href="/" className="btn-app primary mt-5">Back to Webloom</Link></section>
     </main>
   );

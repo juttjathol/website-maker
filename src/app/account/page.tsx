@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Database, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, Database, Mail, ShieldCheck } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { AccountDashboard } from "@/components/account/AccountDashboard";
@@ -10,7 +11,7 @@ export default async function AccountPage() {
   if (!isSupabaseConfigured()) {
     return (
       <main className="account-page-shell">
-        <header className="account-page-header"><Link href="/" className="account-auth-brand"><span><Sparkles size={16} /></span>{BRAND.name}</Link></header>
+        <header className="account-page-header"><Link href="/" className="account-auth-brand"><BrandMark size={32} />{BRAND.name}</Link></header>
         <section className="account-setup-card">
           <div className="account-auth-icon"><Database size={22} /></div>
           <p className="account-eyebrow">ACCOUNT SETUP NEEDED</p>
@@ -37,7 +38,7 @@ export default async function AccountPage() {
   return (
     <main className="account-page-shell">
       <header className="account-page-header">
-        <Link href="/" className="account-auth-brand"><span><Sparkles size={16} /></span>{BRAND.name}</Link>
+        <Link href="/" className="account-auth-brand"><BrandMark size={32} />{BRAND.name}</Link>
         <Link href="/projects" className="btn-app ghost"><ArrowLeft size={14} /> My websites</Link>
       </header>
       <div className="account-page-content">

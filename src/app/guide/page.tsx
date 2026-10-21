@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleHelp, Cloud, Eye, Image as ImageIcon, LayoutTemplate, Rocket, ShoppingBag, Sparkles, Type } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { AccountMenu } from "@/components/account/AccountMenu";
 
 const GUIDE_STEPS = [
@@ -79,7 +80,7 @@ export default function GuidePage() {
       <header className="border-b border-[#ebe8f2] bg-white">
         <div className="mx-auto flex h-[68px] max-w-6xl items-center px-5">
           <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#6d5ae6] text-white"><Sparkles size={16} /></span>{BRAND.name}
+            <BrandMark size={32} />{BRAND.name}
           </Link>
           <nav className="ml-auto flex items-center gap-2">
             <Link href="/templates" className="btn-app ghost">Templates</Link>

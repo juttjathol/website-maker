@@ -29,11 +29,12 @@ interface EditorState {
   saveState: SaveState;
   undoStack: string[];
   redoStack: string[];
-  leftTab: "add" | "layers" | "pages" | "theme";
+  leftTab: "chat" | "add" | "layers" | "pages" | "theme";
 
   /* lifecycle */
   loadProject: (p: Project | null) => void;
   getCurrentPage: () => Page | null;
+  applyProjectSnapshot: (nextProject: Project, focusBlockId?: string | null) => void;
 
   /* history */
   commit: (label?: string) => void;
@@ -43,9 +44,11 @@ interface EditorState {
   /* blocks */
   addBlock: (type: BlockType, parentId: string | null, index: number) => void;
   addBlockTree: (block: Block, parentId: string | null, index: number) => void;
+  addSectionBundle: (types: BlockType[]) => void;
   removeBlockById: (id: string) => void;
   duplicateBlockById: (id: string) => void;
-    moveBlock: (id: string, newParentId: string | null, index: number, history?: boolean) => void;
+  nudgeBlock: (id: string, delta: -1 | 1) => void;
+  moveBlock: (id: string, newParentId: string | null, index: number, history?: boolean) => void;
   updateProp: (id: string, path: string, value: any, historyGroup?: string) => void;
   updateStyle: (id: string, patch: Record<string, any>) => void;
 
@@ -169,6 +172,15 @@ export const useEditor = create<EditorState>((set, get) => {
       return project.pages.find((p) => p.id === currentPageId) || project.pages[0] || null;
     },
 
+    applyProjectSnapshot: (nextProject, focusBlockId = null) => {
+      mutate(() => clone(nextProject), true);
+      const validPage = nextProject.pages.find((p) => p.id === get().currentPageId) || nextProject.pages[0];
+      set({
+        currentPageId: validPage?.id ?? null,
+        selectedId: focusBlockId ?? null,
+      });
+    },
+
     commit: () => {
       const { project, undoStack } = get();
       if (!project) return;
@@ -213,6 +225,24 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ selectedId: block.id });
     },
 
+    addSectionBundle: (types) => {
+      const allowed = types.filter((t) => t !== "scene3d" || get().plan === "pro");
+      if (!allowed.length) return;
+      let lastId: string | null = null;
+      mutate((p) =>
+        withPage(p, get().currentPageId, (page) => {
+          const footerIdx = page.blocks.findIndex((b) => b.type === "footer");
+          let insertIdx = footerIdx >= 0 ? footerIdx : page.blocks.length;
+          for (const type of allowed) {
+            const block = createBlock(type);
+            lastId = block.id;
+            insertBlock(page.blocks, block, null, insertIdx++);
+          }
+        })
+      );
+      if (lastId) set({ selectedId: lastId });
+    },
+
     removeBlockById: (id) => {
       const { selectedId } = get();
       mutate((p) =>
@@ -238,6 +268,19 @@ export const useEditor = create<EditorState>((set, get) => {
           };
           reid(copy);
           loc.list.splice(loc.index + 1, 0, copy);
+        })
+      );
+    },
+
+    nudgeBlock: (id, delta) => {
+      mutate((p) =>
+        withPage(p, get().currentPageId, (page) => {
+          const loc = findBlock(page.blocks, id);
+          if (!loc) return;
+          const targetIdx = loc.index + delta;
+          if (targetIdx < 0 || targetIdx >= loc.list.length) return;
+          const [item] = loc.list.splice(loc.index, 1);
+          loc.list.splice(targetIdx, 0, item);
         })
       );
     },

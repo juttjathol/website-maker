@@ -3,8 +3,9 @@
 import React, { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -49,7 +50,7 @@ export default function SignInPage() {
   return (
     <main className="account-auth-page">
       <div className="account-auth-background" />
-      <Link href="/" className="account-auth-brand"><span><Sparkles size={17} /></span>{BRAND.name}</Link>
+      <Link href="/" className="account-auth-brand"><BrandMark size={32} />{BRAND.name}</Link>
       <section className="account-auth-card">
         <Link href="/" className="account-auth-back"><ArrowLeft size={14} /> Back to Webloom</Link>
         <div className="account-auth-icon"><LockKeyhole size={23} /></div>

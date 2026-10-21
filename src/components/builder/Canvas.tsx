@@ -16,7 +16,7 @@ import { useEditor } from "@/lib/store";
 import { cx } from "@/lib/util";
 import { useSceneEditing } from "./useSceneEditing";
 import { pageFileName } from "@/lib/tree";
-import { Copy, GripVertical, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 
 function EmptyContainer({ parentId, big }: { parentId: string | null; big?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -46,6 +46,7 @@ function CanvasBlock({
   const hover = useEditor((s) => s.hover);
   const remove = useEditor((s) => s.removeBlockById);
   const duplicate = useEditor((s) => s.duplicateBlockById);
+  const nudge = useEditor((s) => s.nudgeBlock);
   const isDropContainer = block.type === "section" || block.type === "column";
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -91,6 +92,12 @@ function CanvasBlock({
           <GripVertical size={13} />
         </button>
         <span className="label">{BLOCKS[block.type]?.label || block.type}</span>
+        <button title="Move section up" aria-label="Move block up" onClick={(e) => { e.stopPropagation(); nudge(block.id, -1); }}>
+          <ArrowUp size={12} />
+        </button>
+        <button title="Move section down" aria-label="Move block down" onClick={(e) => { e.stopPropagation(); nudge(block.id, 1); }}>
+          <ArrowDown size={12} />
+        </button>
         <button title="Duplicate" aria-label="Duplicate block" onClick={(e) => { e.stopPropagation(); duplicate(block.id); }}>
           <Copy size={12} />
         </button>

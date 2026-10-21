@@ -8,11 +8,12 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   ArrowLeft, Check, ChevronDown, CircleHelp, Cloud, CloudOff, Download, Eye, HardDrive,
-  Monitor, Plus, Redo2, Rocket, ShoppingBag, Smartphone, Tablet, Undo2, X,
+  Monitor, Plus, Redo2, Rocket, ShoppingBag, Smartphone, Sparkles, Tablet, Undo2, X,
 } from "lucide-react";
 import type { BlockType, Device, Project } from "@/lib/schema";
 import { getMyPlan } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { BLOCKS } from "@/lib/registry";
 import { useEditor } from "@/lib/store";
 import { findBlock } from "@/lib/tree";
@@ -58,6 +59,7 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
   const setPreviewMode = useEditor((s) => s.setPreviewMode);
   const setPage = useEditor((s) => s.setCurrentPage);
   const addPage = useEditor((s) => s.addPage);
+  const leftTab = useEditor((s) => s.leftTab);
   const setLeftTab = useEditor((s) => s.setLeftTab);
   const addBlock = useEditor((s) => s.addBlock);
   const moveBlock = useEditor((s) => s.moveBlock);
@@ -67,7 +69,17 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
   const [shopifyExporting, setShopifyExporting] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [initialPrompt] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("prompt")?.trim() || "";
+  });
   const currentPage = project.pages.find((p) => p.id === pageId) || project.pages[0];
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setLeftTab("chat");
+    }
+  }, [initialPrompt, setLeftTab]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -170,7 +182,7 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
             <ArrowLeft size={16} />
           </Link>
           <Link href="/" className="toolbar-brand" title={`${BRAND.name} home`}>
-            <span className="toolbar-brand-mark">W</span>
+            <BrandMark size={29} />
             <span className="toolbar-brand-name">{BRAND.name}</span>
           </Link>
           <span className="toolbar-divider" />
@@ -213,6 +225,17 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
         </div>
 
         <div className="toolbar-right">
+          <button
+            type="button"
+            className={cx("btn-app", leftTab === "chat" && !previewMode ? "primary" : "ghost", "ai-chat-toolbar-btn")}
+            onClick={() => {
+              if (previewMode) setPreviewMode(false);
+              setLeftTab("chat");
+            }}
+            title="Describe your website in chat and watch it build itself"
+          >
+            <Sparkles size={14} /> <span>Text to Build</span>
+          </button>
           {!previewMode ? (
             <div className="device-switcher small-hide">
               {DEVICE_BUTTONS.map(({ device: d, label, Icon }) => (
@@ -249,7 +272,21 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
         onDragCancel={() => setDragType(null)}
       >
         <main className={cx("builder-main", previewMode && "preview-on")}>
-          {!previewMode ? <LeftPanel project={project} /> : null}
+          {!previewMode ? (
+            <LeftPanel
+              project={project}
+              initialPrompt={initialPrompt}
+              onPromptConsumed={() => {
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  if (url.searchParams.has("prompt")) {
+                    url.searchParams.delete("prompt");
+                    window.history.replaceState(null, "", url.pathname + url.search);
+                  }
+                }
+              }}
+            />
+          ) : null}
           <Canvas project={project} previewMode={previewMode} />
           {!previewMode ? <Inspector project={project} /> : null}
         </main>

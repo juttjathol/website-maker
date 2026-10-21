@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LockKeyhole, Sparkles } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/site/BrandLogo";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { FirstLoginPasswordForm } from "@/components/account/FirstLoginPasswordForm";
@@ -19,7 +20,7 @@ export default async function FirstLoginPage() {
   return (
     <main className="account-auth-page">
       <div className="account-auth-background" />
-      <Link href="/" className="account-auth-brand"><span><Sparkles size={17} /></span>{BRAND.name}</Link>
+      <Link href="/" className="account-auth-brand"><BrandMark size={32} />{BRAND.name}</Link>
       <section className="account-auth-card">
         <div className="account-auth-icon"><LockKeyhole size={23} /></div>
         <p className="account-eyebrow">SECURE YOUR ACCOUNT</p>
