@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="556.5021721520934" height="559.9979222959491" viewBox="162 215 416 416" xml:space="preserve">
 <desc>Created with Fabric.js 5.5.2</desc>
 <defs>
+  <linearGradient id="wkGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#7c66f5" stop-opacity="0.60"/>
+    <stop offset="100%" stop-color="#4e38c8" stop-opacity="0.66"/>
+  </linearGradient>
+  <filter id="wkTextShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#2c1b78" flood-opacity="0.85"/>
+  </filter>
 </defs>
-<rect x="162" y="215" width="416" height="416" rx="90" ry="90" fill="#0d0a1a"/>
-<g transform="matrix(0.46492 0.30307 -0.30307 0.46492 413.381 354.21498)" id="curved-textbox-group_5a10f881-28c5-4781-adc1-cf9a23a8f459">
+<rect x="162" y="215" width="416" height="416" rx="92" ry="92" fill="url(#wkGlass)" stroke="#ffffff" stroke-opacity="0.35" stroke-width="4"/>
+<g transform="matrix(0.46492 0.30307 -0.30307 0.46492 413.381 354.21498)" id="curved-textbox-group_5a10f881-28c5-4781-adc1-cf9a23a8f459" filter="url(#wkTextShadow)">
 <g style="">
 		<g transform="matrix(0.26722 -0.96364 0.96364 0.26722 -285.21475 103.86789)">
 <g style="">
@@ -147,7 +154,7 @@
 </g>
 </g>
 </g>
-<g transform="matrix(0.08171 -0.12716 0.12219 0.07851 304.50511 520.38975)" id="svg_b5a02ca2-c0b3-4569-8ce9-4630724c8c01">
+<g transform="matrix(0.08171 -0.12716 0.12219 0.07851 304.50511 520.38975)" id="svg_b5a02ca2-c0b3-4569-8ce9-4630724c8c01" filter="url(#wkTextShadow)">
 <path style="stroke: rgb(219,214,214); stroke-width: 24; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(255,255,255); fill-opacity: 0; fill-rule: nonzero; opacity: 1;" paint-order="stroke" transform=" translate(-555.95, -1108.9)" d="M 1108.9 2214.8 C 498.13 2214.8 3 1719.67 3 1108.9 C 3 498.1300000000001 498.13 3 1108.9 3" stroke-linecap="round"/>
 </g>
 </svg>
