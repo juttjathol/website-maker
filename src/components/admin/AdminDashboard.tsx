@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useMemo, useState } from "react";
+import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Activity, Ban, CheckCircle2, Clipboard, FolderOpen, KeyRound, LoaderCircle, Search, Shield, Sparkles, Users, X } from "lucide-react";
 import { formatBytes } from "@/lib/storage-limits";
@@ -60,7 +60,8 @@ export function AdminDashboard({
   audit,
   currentAdminId,
   storageStats,
-  subscriptionRequests,
+  subscriptionRequests: initialSubscriptionRequests,
+  loadRequestsViaFunction = false,
 }: {
   customers: AdminCustomer[];
   totalCustomers: number;
@@ -70,8 +71,11 @@ export function AdminDashboard({
   currentAdminId: string;
   storageStats: AdminStorageStats | null;
   subscriptionRequests: AdminSubscriptionRequest[];
+  loadRequestsViaFunction?: boolean;
 }) {
   const router = useRouter();
+  const [fetchedRequests, setFetchedRequests] = useState<AdminSubscriptionRequest[] | null>(null);
+  const subscriptionRequests = fetchedRequests ?? initialSubscriptionRequests;
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const [pendingId, setPendingId] = useState("");
@@ -82,6 +86,68 @@ export function AdminDashboard({
   const [message, setMessage] = useState("");
   const [credential, setCredential] = useState<IssuedCredential | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const refreshRequestsFromFunction = useCallback(async () => {
+    try {
+      const res = await callWebloomAdminFunction<{
+        requests?: Array<{
+          id: number;
+          user_id?: string | null;
+          email: string;
+          message?: string | null;
+          status?: string;
+          created_at: string;
+        }>;
+      }>({ action: "list_subscription_requests" });
+      if (Array.isArray(res.requests)) {
+        setFetchedRequests(
+          res.requests.map((r) => ({
+            id: Number(r.id),
+            userId: r.user_id || "",
+            email: r.email,
+            message: r.message || "",
+            status: r.status === "approved" ? "approved" : r.status === "rejected" ? "rejected" : "pending",
+            createdAt: r.created_at,
+          }))
+        );
+      }
+    } catch {
+      // Ignore fallback error if function is unreachable
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loadRequestsViaFunction) return;
+    let alive = true;
+    void callWebloomAdminFunction<{
+      requests?: Array<{
+        id: number;
+        user_id?: string | null;
+        email: string;
+        message?: string | null;
+        status?: string;
+        created_at: string;
+      }>;
+    }>({ action: "list_subscription_requests" })
+      .then((res) => {
+        if (alive && Array.isArray(res.requests)) {
+          setFetchedRequests(
+            res.requests.map((r) => ({
+              id: Number(r.id),
+              userId: r.user_id || "",
+              email: r.email,
+              message: r.message || "",
+              status: r.status === "approved" ? "approved" : r.status === "rejected" ? "rejected" : "pending",
+              createdAt: r.created_at,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [loadRequestsViaFunction]);
 
   const visible = useMemo(() => customers.filter((customer) => {
     const textMatch = `${customer.email} ${customer.displayName}`.toLowerCase().includes(query.trim().toLowerCase());
@@ -179,6 +245,9 @@ export function AdminDashboard({
     try {
       await callWebloomAdminFunction({ action: "set_subscription_request_status", requestId: request.id, status });
       setMessage(`Request from ${request.email} ${status}.`);
+      if (loadRequestsViaFunction) {
+        await refreshRequestsFromFunction();
+      }
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The request could not be updated.");

@@ -38,7 +38,7 @@ export default async function AdminPage() {
     supabase.rpc("admin_storage_stats"),
     supabase.from("subscription_requests").select("id,user_id,email,message,status,created_at").order("created_at", { ascending: false }).limit(200),
   ]);
-  const queryError = customersResult.error || projectMetricsResult.error || recentResult.error || auditsResult.error || storageStatsResult.error || requestsResult.error;
+  const queryError = customersResult.error || projectMetricsResult.error || recentResult.error || auditsResult.error || storageStatsResult.error;
   if (queryError) {
     const errorDetail = [
       queryError.code ? `Code: ${queryError.code}` : "",
@@ -92,6 +92,7 @@ export default async function AdminPage() {
           currentAdminId={user.id}
           storageStats={storageStatsResult.data?.[0] || null}
           subscriptionRequests={subscriptionRequests}
+          loadRequestsViaFunction={Boolean(requestsResult.error)}
         />
       </div>
     </main>

@@ -26,6 +26,7 @@ create index if not exists subscription_requests_status_idx
 
 alter table public.subscription_requests enable row level security;
 revoke all on table public.subscription_requests from anon, authenticated;
+grant select on table public.subscription_requests to authenticated;
 
 -- Staff read requests through the authenticated server client, like audit logs.
 drop policy if exists subscription_requests_read_admin on public.subscription_requests;
