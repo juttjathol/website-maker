@@ -8,7 +8,7 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   ArrowLeft, Check, ChevronDown, CircleHelp, Cloud, CloudOff, Download, Eye, HardDrive,
-  Monitor, Plus, Redo2, Rocket, ShoppingBag, Smartphone, Sparkles, Tablet, Undo2, X,
+  Layers, Monitor, Plus, Redo2, Rocket, ShoppingBag, SlidersHorizontal, Smartphone, Sparkles, Tablet, Undo2, X,
 } from "lucide-react";
 import type { BlockType, Device, Project } from "@/lib/schema";
 import { getMyPlan } from "@/lib/db";
@@ -61,6 +61,7 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
   const addPage = useEditor((s) => s.addPage);
   const leftTab = useEditor((s) => s.leftTab);
   const setLeftTab = useEditor((s) => s.setLeftTab);
+  const selectedId = useEditor((s) => s.selectedId);
   const addBlock = useEditor((s) => s.addBlock);
   const moveBlock = useEditor((s) => s.moveBlock);
   const [dragType, setDragType] = useState<BlockType | null>(null);
@@ -73,7 +74,11 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("prompt")?.trim() || "";
   });
+  const [mobilePane, setMobilePane] = useState<"canvas" | "left" | "inspector">(() =>
+    initialPrompt ? "left" : "canvas"
+  );
   const currentPage = project.pages.find((p) => p.id === pageId) || project.pages[0];
+  const selectedBlock = currentPage && selectedId ? findBlock(currentPage.blocks, selectedId)?.block ?? null : null;
 
   useEffect(() => {
     if (initialPrompt) {
@@ -231,6 +236,7 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
             onClick={() => {
               if (previewMode) setPreviewMode(false);
               setLeftTab("chat");
+              setMobilePane("left");
             }}
             title="Describe your website in chat and watch it build itself"
           >
@@ -271,7 +277,10 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
         onDragEnd={onDragEnd}
         onDragCancel={() => setDragType(null)}
       >
-        <main className={cx("builder-main", previewMode && "preview-on")}>
+        <main
+          className={cx("builder-main", previewMode && "preview-on")}
+          data-mobile-pane={previewMode ? "canvas" : mobilePane}
+        >
           {!previewMode ? (
             <LeftPanel
               project={project}
@@ -300,6 +309,66 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {!previewMode ? (
+        <>
+          {mobilePane === "canvas" && selectedBlock ? (
+            <div className="builder-mobile-selection-bar">
+              <span className="truncate text-xs font-extrabold text-[#251f3d]">
+                Selected: {BLOCKS[selectedBlock.type]?.label || selectedBlock.type}
+              </span>
+              <button
+                type="button"
+                className="btn-app primary !px-3 !py-1.5 !text-xs"
+                onClick={() => setMobilePane("inspector")}
+              >
+                <SlidersHorizontal size={13} /> Edit Block
+              </button>
+            </div>
+          ) : null}
+          <nav className="builder-mobile-dock" aria-label="Mobile builder workspace">
+            <button
+              type="button"
+              className={cx("builder-mobile-dock-btn", mobilePane === "canvas" && "active")}
+              onClick={() => setMobilePane("canvas")}
+            >
+              <Monitor size={16} />
+              <span>Canvas</span>
+            </button>
+            <button
+              type="button"
+              className={cx("builder-mobile-dock-btn", mobilePane === "left" && leftTab === "chat" && "active")}
+              onClick={() => {
+                setLeftTab("chat");
+                setMobilePane("left");
+              }}
+            >
+              <Sparkles size={16} />
+              <span>AI Chat</span>
+            </button>
+            <button
+              type="button"
+              className={cx("builder-mobile-dock-btn", mobilePane === "left" && leftTab !== "chat" && "active")}
+              onClick={() => {
+                if (leftTab === "chat") setLeftTab("add");
+                setMobilePane("left");
+              }}
+            >
+              <Layers size={16} />
+              <span>Blocks &amp; Style</span>
+            </button>
+            <button
+              type="button"
+              className={cx("builder-mobile-dock-btn", mobilePane === "inspector" && "active")}
+              onClick={() => setMobilePane("inspector")}
+            >
+              <SlidersHorizontal size={16} />
+              <span>{selectedBlock ? "Edit Block" : "Page Info"}</span>
+              {selectedBlock ? <span className="builder-mobile-dot" /> : null}
+            </button>
+          </nav>
+        </>
+      ) : null}
 
       {publishOpen ? (
         <PublishWizard project={project} onClose={() => setPublishOpen(false)} onExport={performExport} onShopifyExport={performShopifyExport} />

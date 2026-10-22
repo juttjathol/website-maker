@@ -2,9 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleHelp, Cloud, Eye, Image as ImageIcon, LayoutTemplate, Rocket, ShoppingBag, Sparkles, Type } from "lucide-react";
-import { BRAND } from "@/lib/brand";
-import { BrandMark } from "@/components/site/BrandLogo";
-import { AccountMenu } from "@/components/account/AccountMenu";
+import { SiteHeader } from "@/components/site/SiteHeader";
 
 const GUIDE_STEPS = [
   {
@@ -76,19 +74,8 @@ export default function GuidePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8f7fc] text-[#241e39]">
-      <header className="border-b border-[#ebe8f2] bg-white">
-        <div className="mx-auto flex h-[68px] max-w-6xl items-center px-5">
-          <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <BrandMark size={32} />{BRAND.name}
-          </Link>
-          <nav className="ml-auto flex items-center gap-2">
-            <Link href="/templates" className="btn-app ghost">Templates</Link>
-            <Link href="/projects" className="btn-app ghost">My websites</Link>
-            <AccountMenu />
-          </nav>
-        </div>
-      </header>
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f7fc] text-[#241e39]">
+      <SiteHeader current="guide" />
 
       <section className="relative overflow-hidden bg-[#211b36] text-white">
         <div className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-[#6d5ae6]/30 blur-3xl" />

@@ -175,25 +175,27 @@
 }
 @media(max-width:650px) {
   .account-menu-email { max-width:90px; }
-  .account-page-header,.admin-page-header { padding-left:14px; padding-right:14px; }
-  .account-page-header .account-auth-brand,.admin-page-header .account-auth-brand { font-size:14px; }
+  .account-page-header,.admin-page-header { flex-wrap:wrap; padding:12px 14px; gap:10px; }
+  .account-page-header > div,.admin-page-header > div { flex-wrap:wrap; width:100%; justify-content:flex-start; gap:6px; }
+  .account-page-header .account-auth-brand,.admin-page-header .account-auth-brand { font-size:15px; }
   .account-page-title,.admin-page-title { align-items:flex-start; flex-direction:column; gap:12px; }
-  .account-page-title h1,.admin-page-title h1 { font-size:27px; }
+  .account-page-title h1,.admin-page-title h1 { font-size:26px; }
   .account-dashboard-grid { grid-template-columns:1fr; }
   .account-next-card { grid-column:auto; }
   .account-action-list { grid-template-columns:1fr; }
   .account-card { padding:16px; }
   .account-auth-card { padding:21px; }
   .account-auth-card h1 { font-size:24px; }
-  .admin-metric-grid { gap:8px; }
+  .admin-metric-grid { grid-template-columns:1fr 1fr; gap:8px; }
   .admin-metric-card { padding:11px; }
   .admin-metric-card > strong { font-size:20px; }
-  .admin-card-heading { padding:15px; }
+  .admin-card-heading { flex-wrap:wrap; padding:15px; }
   .admin-storage-content { padding:0 15px 15px; }
   .admin-create-user-form { grid-template-columns:1fr; padding:0 15px 15px; }
   .admin-create-user-form > .btn-app { grid-column:auto; width:100%; }
   .admin-password-issued { margin:0 15px 15px; }
-  .admin-table-tools { padding:0 14px 13px; }
+  .admin-table-tools { flex-direction:column; padding:0 14px 13px; }
+  .admin-filter { width:100%; }
   .admin-table th:first-child,.admin-table td:first-child { padding-left:14px; }
   .admin-audit-list { padding-left:14px; padding-right:14px; }
   .admin-audit-list time { display:none; }

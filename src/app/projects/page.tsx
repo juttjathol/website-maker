@@ -7,13 +7,11 @@ import {
   Cloud, HardDrive, LoaderCircle, MoreHorizontal, Pencil, Plus, Sparkles, Trash2,
 } from "lucide-react";
 import type { Project } from "@/lib/schema";
-import { BRAND } from "@/lib/brand";
-import { BrandMark } from "@/components/site/BrandLogo";
 import { applyPromptToProject } from "@/lib/text-to-build";
 import { dbDelete, dbGetAll, dbPut, syncLocalProjects } from "@/lib/db";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AccountMenu } from "@/components/account/AccountMenu";
+import { SiteHeader } from "@/components/site/SiteHeader";
 import { newProject } from "@/lib/store";
 import { formatTime, downloadBlob } from "@/lib/util";
 import { duplicateProject, prepareImportedProject } from "@/lib/project-ops";
@@ -129,23 +127,17 @@ export default function ProjectsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8f7fc]">
-      <header className="border-b border-[#ebe8f2] bg-white">
-        <div className="mx-auto flex h-[68px] max-w-6xl items-center px-5">
-          <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <BrandMark size={32} />
-            {BRAND.name}
-          </Link>
-          <nav className="ml-auto flex items-center gap-2">
-            <Link href="/templates" className="btn-app ghost"><LayoutTemplate size={15} /> Templates</Link>
-            <Link href="/guide" className="btn-app ghost">Guide</Link>
-            <AccountMenu />
-            <button className="btn-app primary" onClick={() => { setNewName("My new website"); setCreateOpen(true); }}><Plus size={15} /> Create a website</button>
-          </nav>
-        </div>
-      </header>
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f7fc]">
+      <SiteHeader
+        current="projects"
+        primaryLabel="Create a website"
+        onPrimaryClick={() => {
+          setNewName("My new website");
+          setCreateOpen(true);
+        }}
+      />
 
-      <div className="mx-auto max-w-6xl px-5 pb-16 pt-10">
+      <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-5 sm:pt-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
             <Link href="/" className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#817b96] hover:text-[#6d5ae6]"><ArrowLeft size={13} /> Back to home</Link>

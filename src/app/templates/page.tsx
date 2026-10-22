@@ -4,15 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, Check, Eye, LoaderCircle, Rocket, Sparkles, X } from "lucide-react";
-import { BRAND } from "@/lib/brand";
-import { BrandMark } from "@/components/site/BrandLogo";
 import { TEMPLATES, type TemplateInfo } from "@/lib/templates";
 import type { Project } from "@/lib/schema";
 import { dbPut } from "@/lib/db";
 import { SiteChrome, SiteStyleTag } from "@/components/site/SiteChrome";
 import { SiteBody } from "@/components/site/renderers";
 import { cx } from "@/lib/util";
-import { AccountMenu } from "@/components/account/AccountMenu";
+import { SiteHeader } from "@/components/site/SiteHeader";
 
 const FILTERS = ["All", ...Array.from(new Set(TEMPLATES.map((template) => template.category)))];
 
@@ -51,21 +49,8 @@ export default function TemplatesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8f7fc]">
-      <header className="sticky top-0 z-40 border-b border-[#ebe8f2] bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex h-[68px] max-w-6xl items-center px-5">
-          <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <BrandMark size={32} />
-            {BRAND.name}
-          </Link>
-          <nav className="ml-auto flex items-center gap-2">
-            <Link href="/projects" className="btn-app ghost">My websites</Link>
-            <Link href="/guide" className="btn-app ghost">Guide</Link>
-            <AccountMenu />
-            <Link href="/builder" className="btn-app primary"><Rocket size={14} /> Start building</Link>
-          </nav>
-        </div>
-      </header>
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f7fc]">
+      <SiteHeader current="templates" />
 
       <section className="template-hero">
         <div className="mx-auto max-w-6xl px-5 py-14 md:py-20">

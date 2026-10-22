@@ -854,15 +854,16 @@ function createTailoredBlock(
     case "scene3d":
       b.props = {
         ...b.props,
-        title: `${brandName} in 3D`,
-        description: "Interactive CSS 3D showcase — drag or customize in Webloom Pro.",
+        title: `${brandName} in 3D Motion`,
+        description: "Interactive CSS 3D motion graphics — drag objects or switch presets in Webloom Pro.",
         background: "#100b24",
-        height: 400,
-        perspective: 900,
+        height: 420,
+        perspective: 950,
         animate: true,
         objects: [
-          sceneObject("cube", 0),
-          { ...sceneObject("diamond", 1), x: 68, y: 54, size: 62 },
+          { ...sceneObject("cube", 0), name: "Core Hypercube", x: 50, y: 48, depth: 36, size: 104, color: "#8b5cf6" },
+          { ...sceneObject("diamond", 1), name: "Cyan Diamond", x: 24, y: 42, depth: 60, size: 74, color: "#06b6d4" },
+          { ...sceneObject("cube", 2), name: "Coral Prism", x: 76, y: 56, depth: 42, size: 78, color: "#f97316" },
         ],
       };
       break;
