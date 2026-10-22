@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import Link from "next/link";
 import type { Block, FieldDef } from "@/lib/schema";
 import { MAX_SCENE_OBJECTS, sceneObject, sceneObjects, type SceneObject, type Shape3D } from "@/lib/scene-3d";
 import { useEditor } from "@/lib/store";
@@ -77,7 +76,6 @@ const OBJECT_FIELDS: FieldDef[] = [
 ];
 
 export function Scene3DInspector({ block }: { block: Block }) {
-  const plan = useEditor((s) => s.plan);
   const update = useEditor((s) => s.updateProp);
   const selection = useEditor((s) => s.sceneSelection);
   const setActive = (index: number) => useEditor.getState().selectSceneObject(block.id, index);
@@ -91,11 +89,6 @@ export function Scene3DInspector({ block }: { block: Block }) {
     saveObjects([...objects, sceneObject(shape, objects.length)]);
     setActive(objects.length);
   };
-  if (plan !== "pro") return <div className="rounded-xl bg-[#f7f5fd] p-4 text-sm leading-relaxed">
-    <strong>3D tools are included in Webloom Pro.</strong>
-    <p className="my-2">Your saved scene is kept safe. Upgrade to edit or export it, or delete this block to continue on Free.</p>
-    <Link className="btn-app primary" href="/account">Request Pro</Link>
-  </div>;
   return <div className="space-y-4">
     <div className="rounded-xl bg-[#f7f5fd] p-3 text-xs leading-relaxed text-[#716b89]">
       Drag objects on the canvas or focus one and use arrow keys. Hold Shift for bigger steps. These lightweight CSS 3D shapes export without external scripts. Custom model uploads are not included.

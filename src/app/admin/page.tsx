@@ -31,12 +31,12 @@ export default async function AdminPage() {
   // eslint-disable-next-line react-hooks/purity
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const [customersResult, projectMetricsResult, recentResult, auditsResult, storageStatsResult, requestsResult] = await Promise.all([
-    supabase.from("profiles").select("id,email,display_name,created_at,suspended_at,must_change_password,plan").order("created_at", { ascending: false }).limit(200),
+    supabase.from("profiles").select("id,email,display_name,created_at,suspended_at,must_change_password,plan,credits").order("created_at", { ascending: false }).limit(200),
     supabase.rpc("admin_project_counts"),
     supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", since),
     supabase.from("audit_logs").select("id,actor_id,action,target_email,created_at").order("created_at", { ascending: false }).limit(20),
     supabase.rpc("admin_storage_stats"),
-    supabase.from("subscription_requests").select("id,user_id,email,message,status,created_at").order("created_at", { ascending: false }).limit(200),
+    supabase.from("subscription_requests").select("id,user_id,email,message,status,requested_credits,request_type,created_at").order("created_at", { ascending: false }).limit(200),
   ]);
   const queryError = customersResult.error || projectMetricsResult.error || recentResult.error || auditsResult.error || storageStatsResult.error;
   if (queryError) {
@@ -61,6 +61,7 @@ export default async function AdminPage() {
     mustChangePassword: Boolean(customer.must_change_password),
     projectCount: counts.get(customer.id) || 0,
     plan: customer.plan === "pro" ? "pro" : "free",
+    credits: typeof customer.credits === "number" ? customer.credits : 30,
   }));
   const subscriptionRequests: AdminSubscriptionRequest[] = (requestsResult.data || []).map((request) => ({
     id: Number(request.id),
@@ -68,6 +69,8 @@ export default async function AdminPage() {
     email: request.email,
     message: request.message || "",
     status: request.status === "approved" ? "approved" : request.status === "rejected" ? "rejected" : "pending",
+    requestedCredits: typeof request.requested_credits === "number" ? request.requested_credits : 10,
+    requestType: request.request_type === "pricing" ? "pricing" : "credits",
     createdAt: request.created_at,
   }));
   const audit: AdminAuditItem[] = (auditsResult.data || []).map((item) => ({

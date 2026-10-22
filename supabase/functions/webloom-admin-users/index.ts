@@ -14,17 +14,23 @@ type ActionBody = {
     | "reset_customer_password"
     | "complete_first_password_change"
     | "request_subscription"
+    | "request_credits"
     | "list_subscription_requests"
     | "set_subscription_request_status"
-    | "set_user_plan";
+    | "set_user_plan"
+    | "adjust_user_credits";
   email?: string;
   name?: string;
   userId?: string;
   newPassword?: string;
   message?: string;
+  requestedCredits?: number;
+  requestType?: "credits" | "pricing";
   requestId?: number;
   status?: string;
   plan?: string;
+  delta?: number;
+  setExact?: boolean;
 };
 
 function json(status: number, body: Record<string, unknown>) {
@@ -138,19 +144,27 @@ Deno.serve(async (request: Request) => {
     return json(200, { ok: true });
   }
 
-  // Any signed-in customer may ask for a Pro subscription. The request is
-  // tied to their verified account email so staff can contact them.
-  if (body.action === "request_subscription") {
+  // Any signed-in customer may request credits or ask admin about credit pricing.
+  if (body.action === "request_subscription" || body.action === "request_credits") {
     const message = String(body.message || "").trim().slice(0, 500);
+    const requestedCredits = Math.max(0, Math.min(10000, Math.round(Number(body.requestedCredits) || 10)));
+    const requestType = body.requestType === "pricing" ? "pricing" : "credits";
     if (!caller.email) {
       return json(400, { error: "Your account does not have an email address." });
     }
     const { error: requestError } = await adminClient
       .from("subscription_requests")
-      .insert({ user_id: caller.id, email: caller.email, message, status: "pending" });
+      .insert({
+        user_id: caller.id,
+        email: caller.email,
+        message,
+        requested_credits: requestedCredits,
+        request_type: requestType,
+        status: "pending",
+      });
     if (requestError) {
-      console.error("Unable to record subscription request", requestError.message);
-      return json(500, { error: "The subscription request could not be saved. Please try again." });
+      console.error("Unable to record credit request", requestError.message);
+      return json(500, { error: "The credit request could not be saved. Please try again." });
     }
     return json(201, { ok: true });
   }
@@ -198,11 +212,9 @@ Deno.serve(async (request: Request) => {
       });
     }
 
-    // The database trigger sets this during user creation too; this explicit
-    // update makes the first-login lock resilient to future Auth trigger changes.
     const { error: profileError } = await adminClient
       .from("profiles")
-      .update({ display_name: name, must_change_password: true })
+      .update({ display_name: name, must_change_password: true, credits: 30 })
       .eq("id", data.user.id);
     if (profileError) {
       await adminClient.auth.admin.deleteUser(data.user.id);
@@ -220,7 +232,7 @@ Deno.serve(async (request: Request) => {
       action: "customer_created",
       target_user_id: data.user.id,
       target_email: email,
-      metadata: { access: "admin_created", first_login_password_change: true },
+      metadata: { access: "admin_created", first_login_password_change: true, starter_credits: 30 },
     });
     if (auditError) {
       console.error(
@@ -321,11 +333,11 @@ Deno.serve(async (request: Request) => {
   if (body.action === "list_subscription_requests") {
     const { data: requests, error: requestsError } = await adminClient
       .from("subscription_requests")
-      .select("id,user_id,email,message,status,created_at")
+      .select("id,user_id,email,message,status,requested_credits,request_type,created_at")
       .order("created_at", { ascending: false })
       .limit(200);
     if (requestsError) {
-      return json(500, { error: "Subscription requests could not be loaded." });
+      return json(500, { error: "Credit requests could not be loaded." });
     }
     return json(200, { ok: true, requests: requests || [] });
   }
@@ -334,16 +346,94 @@ Deno.serve(async (request: Request) => {
     const requestId = Number(body.requestId);
     const status = body.status === "approved" ? "approved" : "rejected";
     if (!Number.isInteger(requestId) || requestId <= 0) {
-      return json(400, { error: "Choose a valid subscription request." });
+      return json(400, { error: "Choose a valid request." });
     }
-    const { error: statusError } = await adminClient.rpc(
-      "admin_set_subscription_request_status",
-      { p_request_id: requestId, p_status: status },
-    );
-    if (statusError) {
-      return json(400, { error: statusError.message || "The request could not be updated." });
+    const { data: reqRow, error: reqFetchError } = await adminClient
+      .from("subscription_requests")
+      .update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: caller.id,
+      })
+      .eq("id", requestId)
+      .select("id,user_id,email,requested_credits")
+      .maybeSingle();
+    if (reqFetchError || !reqRow) {
+      return json(400, { error: reqFetchError?.message || "The request could not be updated." });
     }
-    return json(200, { ok: true });
+
+    const creditsToAdd = Math.max(10, Number(body.delta) || Number(reqRow.requested_credits) || 10);
+    if (status === "approved" && reqRow.user_id) {
+      const { data: currentProfile } = await adminClient
+        .from("profiles")
+        .select("credits")
+        .eq("id", reqRow.user_id)
+        .maybeSingle();
+      const nextCredits = Math.max(0, (Number(currentProfile?.credits) || 0) + creditsToAdd);
+      await adminClient
+        .from("profiles")
+        .update({
+          credits: nextCredits,
+          plan: "pro",
+          subscribed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", reqRow.user_id);
+    }
+
+    await adminClient.from("audit_logs").insert({
+      actor_id: caller.id,
+      action: status === "approved" ? "credit_request_approved" : "credit_request_rejected",
+      target_user_id: reqRow.user_id,
+      target_email: reqRow.email || "",
+      metadata: {
+        request_id: requestId,
+        status,
+        credits_added: status === "approved" ? creditsToAdd : 0,
+      },
+    });
+    return json(200, { ok: true, creditsAdded: status === "approved" ? creditsToAdd : 0 });
+  }
+
+  if (body.action === "adjust_user_credits") {
+    const targetUserId = body.userId || "";
+    const delta = Math.round(Number(body.delta) || 0);
+    const setExact = Boolean(body.setExact);
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetUserId)
+    ) {
+      return json(400, { error: "Choose a valid customer account." });
+    }
+    const { data: currentProfile, error: fetchErr } = await adminClient
+      .from("profiles")
+      .select("credits,email,plan")
+      .eq("id", targetUserId)
+      .maybeSingle();
+    if (fetchErr || !currentProfile) {
+      return json(404, { error: "Customer account not found." });
+    }
+    const nextCredits = setExact
+      ? Math.max(0, delta)
+      : Math.max(0, (Number(currentProfile.credits) || 0) + delta);
+    const { error: updateErr } = await adminClient
+      .from("profiles")
+      .update({
+        credits: nextCredits,
+        plan: nextCredits > 30 ? "pro" : currentProfile.plan,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetUserId);
+    if (updateErr) {
+      return json(400, { error: updateErr.message || "Credits could not be updated." });
+    }
+    await adminClient.from("audit_logs").insert({
+      actor_id: caller.id,
+      action: "credits_adjusted",
+      target_user_id: targetUserId,
+      target_email: currentProfile.email || "",
+      metadata: { delta, set_exact: setExact, credits: nextCredits },
+    });
+    return json(200, { ok: true, credits: nextCredits });
   }
 
   if (body.action === "set_user_plan") {

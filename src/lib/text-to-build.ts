@@ -583,9 +583,9 @@ export interface PromptBuildResult {
 /** Extract a brand name if the user specified one, e.g. "called Velvet Roast", "named NovaPay", "for Sweet Crumb" */
 export function extractBrandName(prompt: string): string | null {
   const patterns = [
-    /(?:called|named|titled|brand\s+name\s+is|rename(?:\s+it|\s+the\s+website|\s+website|\s+site)?\s+to|name\s+it)\s+["'“”]?([A-Z0-9][A-Za-z0-9&'’.\- ]{1,32}?)["'“”]?(?=\s+(?:with|that|and|in|using|featuring|where|which|for|on|to)\b|[,.!?]|$)/i,
+    /(?:called|named|titled|brand\s+name\s+is|rename(?:\s+it|\s+the\s+website|\s+website|\s+site)?\s+to|name\s+it)\s+["'“”]?([A-Z0-9][A-Za-z0-9&'’.\- ]{1,32}?)["'“”]?(?=\s+(?:with|that|and|in|using|featuring|where|which|for|on|to|from|matching|like|based)\b|[,.!?]|$)/i,
     /["'“”]([A-Za-z0-9][A-Za-z0-9&'’.\- ]{1,30})["'“”]\s+(?:website|site|store|shop|studio|cafe|bakery|clinic|agency|portfolio|app)/i,
-    /(?:website|site|page|store|shop)\s+for\s+["'“”]?([A-Z][A-Za-z0-9&'’.\- ]{1,28}?)["'“”]?(?=\s+(?:with|that|and|in|using|featuring|where|which)\b|[,.!?]|$)/,
+    /(?:website|site|page|store|shop)\s+for\s+["'“”]?([A-Z][A-Za-z0-9&'’.\- ]{1,28}?)["'“”]?(?=\s+(?:with|that|and|in|using|featuring|where|which|from|matching|like|based)\b|[,.!?]|$)/,
   ];
   for (const re of patterns) {
     const match = prompt.match(re);
@@ -674,13 +674,20 @@ function detectThemeOverrides(prompt: string, fallbackPresetId?: string): { them
   else if (/\b(mono|monospace|technical\s+font|code\s+font)\b/.test(lower)) patch.font = "mono";
   else if (/\b(modern\s+font|sans-serif|clean\s+font)\b/.test(lower)) patch.font = "modern";
 
+  // Explicit hex color overrides in prompt (e.g. "primary color #ff4d4d" or "#06b6d4")
+  const hexMatches = prompt.match(/#[0-9a-fA-F]{6}\b/g);
+  if (hexMatches && hexMatches.length > 0) {
+    patch.primary = hexMatches[0];
+    if (hexMatches[1]) patch.accent = hexMatches[1];
+  }
+
   // Radius overrides
   if (/\b(sharp\s+corners|square\s+corners|no\s+rounding)\b/.test(lower)) patch.radius = 2;
   else if (/\b(pill|super\s+rounded|extra\s+rounded|rounder)\b/.test(lower)) patch.radius = 24;
 
   return {
     themePatch: patch,
-    label: matchedPreset?.name,
+    label: matchedPreset?.name || (hexMatches ? `Custom (${hexMatches[0]})` : undefined),
   };
 }
 
@@ -699,7 +706,7 @@ const SECTION_KEYWORDS: { type: BlockType; label: string; regex: RegExp }[] = [
   { type: "countdown", label: "Countdown timer", regex: /\b(countdown|timer|launch\s+clock|event\s+countdown)\b/i },
   { type: "contact", label: "Contact form", regex: /\b(contact|form|get\s+in\s+touch|inquir(?:e|y)|booking|location|address)\b/i },
   { type: "cta", label: "Call to action", regex: /\b(cta|call\s+to\s+action|closing\s+banner)\b/i },
-  { type: "scene3d", label: "3D scene", regex: /\b(3d|three\s*d|cube|diamond\s+scene)\b/i },
+  { type: "scene3d", label: "3D motion scene", regex: /\b(3d|three\s*d|cube|diamond\s+scene|motion\s+graphics?|prism|holo)\b/i },
 ];
 
 function createTailoredBlock(
@@ -880,7 +887,7 @@ export function applyPromptToProject(
 ): PromptBuildResult {
   const prompt = rawPrompt.trim();
   const lower = prompt.toLowerCase();
-  const plan = options?.plan ?? "free";
+  const plan = options?.plan ?? "pro";
   const next = clone(currentProject);
   const page: Page = next.pages[0] || {
     id: uid("p"),

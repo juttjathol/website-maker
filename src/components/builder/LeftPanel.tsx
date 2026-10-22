@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -148,7 +147,6 @@ export function LeftPanel({
   initialPrompt?: string;
   onPromptConsumed?: () => void;
 }) {
-  const plan = useEditor((s) => s.plan);
   const tab = useEditor((s) => s.leftTab);
   const setTab = useEditor((s) => s.setLeftTab);
   const pageId = useEditor((s) => s.currentPageId);
@@ -259,10 +257,6 @@ export function LeftPanel({
           <div className="mb-3 rounded-lg bg-[#f7f5fd] px-2.5 py-2 text-[11px] leading-relaxed text-[#716b89]">
             Click <strong>+</strong> to add a block, or drag the grip onto your page.
           </div>
-          {plan !== "pro" ? <div className="mb-3 rounded-lg border border-[#e7e4f0] p-3 text-xs leading-relaxed">
-            <strong>New: 3D scenes</strong><p className="my-1">Cubes, diamond cubes and panels. Drag, rotate and animate with Pro.</p>
-            <Link href="/account" className="font-bold text-[#6d5ae6]">Request Webloom Pro →</Link>
-          </div> : null}
           {CATEGORIES.map((category) => {
             const items = matches.filter((x) => x.category === category.id);
             if (!items.length) return null;
@@ -280,7 +274,7 @@ export function LeftPanel({
                 {!isCollapsed ? (
                   <div className="space-y-1.5">
                     {items.map((b) => (
-                      <DraggableBlock key={b.type} type={b.type} locked={b.type === "scene3d" && plan !== "pro"} onAdd={() => chooseBlock(b.type)} />
+                      <DraggableBlock key={b.type} type={b.type} locked={false} onAdd={() => chooseBlock(b.type)} />
                     ))}
                   </div>
                 ) : null}

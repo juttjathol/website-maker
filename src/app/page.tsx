@@ -14,8 +14,8 @@ import { Interactive3DShowcase, Mini3DCube } from "@/components/site/Interactive
 const FEATURES = [
   {
     icon: Wand2,
-    title: "Text-to-Build AI Chat",
-    text: "Just describe your website in plain English — like chatting with a friend — and watch your pages, sections, copy, and colors build themselves live.",
+    title: "Text & Image-to-Build AI",
+    text: "Describe your website in plain English — or upload a screenshot of any reference website you like — and watch Webloom clone its layout, colors, and sections onto your editable canvas.",
   },
   {
     icon: Boxes,
@@ -75,16 +75,16 @@ const STEPS = [
 
 const FAQS = [
   {
-    q: "How does Text-to-Build chat work?",
-    a: "Open the builder and type what kind of website you want in the Chat tab — for example, 'Build a cozy bakery called Sweet Crumb with menu, gallery, pricing and contact'. Webloom immediately assembles tailored sections, headlines, and colors on your canvas. You can keep chatting to add 3D motion graphics, switch to dark mode, or rename your brand.",
+    q: "How does Text & Image-to-Build chat work?",
+    a: "Open the builder and either type what kind of website you want in the Chat tab — or upload a screenshot of any reference website you want to copy! Webloom analyzes the reference picture's colors, dark/light theme, and layout sections and builds a complete editable copy on your canvas so you can customize everything in your own way.",
   },
   {
     q: "Do I need to know anything about coding?",
-    a: "Absolutely not. Webloom is built for people who have never made a website before. Everything is visual and conversational: chat to build, drag blocks, click text to edit it, and pick designer color palettes in one click.",
+    a: "Absolutely not. Webloom is built for people who have never made a website before. Everything is visual and conversational: chat to build, upload a reference pic, drag blocks, click text to edit it, and pick designer color palettes in one click.",
   },
   {
-    q: "How much does it cost?",
-    a: "The builder is free to use. You design your site, preview it and download the finished website as many times as you like. Putting the site online can also be free — hosts like Netlify and GitHub Pages host simple websites at no cost.",
+    q: "How do Webloom Credits work?",
+    a: "Every free account starts with 30 credits. Making 1 website uses 30 credits, and downloading the finished website ZIP or Shopify theme uses 10 more credits. Whenever you need extra credits to download or build more sites, a quick popup lets you request credits from the Admin or message the Admin about credit pricing.",
   },
   {
     q: "Where will my website live? Do I need an account?",
@@ -117,14 +117,13 @@ export default function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-[1.06fr_.94fr] lg:gap-12">
             <div>
               <div className="mb-4 inline-flex flex-wrap items-center gap-2 rounded-full border border-[#6d5ae6]/25 bg-white/85 px-3.5 py-1.5 text-xs font-semibold text-[#5546c8] shadow-xs sm:text-sm">
-                <Sparkles size={14} className="motion-spin-slow" /> Free to start · AI Text-to-Build · 3D Motion
+                <Sparkles size={14} className="motion-spin-slow" /> 30 Free Credits · Reference Image-to-Website · 3D Motion
               </div>
-              <h1 className="text-3xl font-extrabold leading-[1.08] tracking-tight text-[#161224] sm:text-4xl md:text-[3.45rem]">
-                Describe your website, <span className="text-grad">watch it bloom<br className="hidden md:block" /> in 3D &amp; motion</span>
+              <h1 className="text-3xl font-extrabold leading-[1.16] tracking-tight text-[#161224] sm:text-4xl md:text-[3.35rem]">
+                Describe your website, <span className="text-grad">watch it bloom in 3D &amp; motion</span>
               </h1>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-[#5c5675] sm:mt-5 sm:text-lg">
-                Chat with {BRAND.name} to generate a complete website automatically, or design
-                visually with one-click brand styles, interactive 3D motion graphics, and drag &amp; drop blocks.
+                Chat with {BRAND.name} or upload a reference website screenshot to generate an editable copy automatically — complete with one-click brand styles, interactive 3D motion graphics, and drag &amp; drop blocks.
               </p>
 
               {/* Interactive Text-to-Build Launcher */}
@@ -151,9 +150,9 @@ export default function HomePage() {
               <div className="motion-orbit-ring pointer-events-none" aria-hidden="true" />
               <div className="motion-orbit-ring-reverse pointer-events-none" aria-hidden="true" />
 
-              {/* Floating 3D Cubes around the Hero Stage */}
-              <Mini3DCube size={44} color="#8b5cf6" className="motion-hero-cube-top" />
-              <Mini3DCube size={38} color="#f97316" className="motion-hero-cube-bottom" />
+              {/* Decorative 3D Cubes positioned outside text areas */}
+              <Mini3DCube size={40} color="#8b5cf6" className="motion-hero-cube-top" />
+              <Mini3DCube size={36} color="#f97316" className="motion-hero-cube-bottom" />
 
               <div className="motion-hero-card-3d relative overflow-hidden rounded-[22px] border border-white/70 bg-[#120e24] p-2 shadow-[0_32px_90px_rgba(22,18,36,.28)] sm:rounded-[24px] sm:p-2.5">
                 <div className="mb-2 flex items-center justify-between gap-2 px-2 py-1 text-[11px] text-white/75">
@@ -177,66 +176,38 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Desktop Floating Motion Card 1: AI Chat Prompt Bubble */}
-              <div className="motion-float-card motion-float-top-left">
-                <div className="flex items-center gap-2 text-[11px] font-extrabold text-[#5b47df]">
-                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#6d5ae6] text-white">
-                    <Wand2 size={13} />
-                  </span>
-                  <span>Text-to-Build Chat</span>
-                  <span className="motion-pulse-dot ml-auto" />
-                </div>
-                <p className="mt-1.5 text-[11.5px] font-medium leading-snug text-[#251f3d]">
-                  “Build a cozy coffee shop with warm espresso colors, 3D hero &amp; reviews”
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <span className="rounded-full bg-[#eef8f1] px-2 py-0.5 text-[9.5px] font-bold text-[#1f7a45]">✓ Hero + 3D Scene</span>
-                  <span className="rounded-full bg-[#f3f0ff] px-2 py-0.5 text-[9.5px] font-bold text-[#5b47df]">✓ Warm Espresso</span>
-                </div>
-              </div>
-
-              {/* Desktop Floating Motion Card 2: One-Click Palette Switcher */}
-              <div className="motion-float-card motion-float-bottom-right">
-                <div className="flex items-center gap-2.5">
-                  <BrandMark size={32} />
-                  <div>
-                    <div className="text-[11px] font-extrabold text-[#1f1935]">8 Designer Palettes + 3D</div>
-                    <div className="text-[10px] text-[#6d658a]">One-click theme &amp; motion restyle</div>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center gap-1.5">
-                  {["#6d5ae6", "#0b0a14", "#9c4a27", "#15803d", "#0284c7", "#e11d48", "#d4a853"].map((hex) => (
-                    <span
-                      key={hex}
-                      className="h-4 w-4 rounded-full border border-black/15 shadow-2xs"
-                      style={{ background: hex }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Mobile-organized 3D Feature Pills (visible on phones where floating overlays would clip) */}
-              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:hidden">
-                <div className="rounded-2xl border border-[#e5dff6] bg-white/95 p-3 shadow-sm">
+              {/* Clean non-overlapping 2-column feature cards below the Studio preview on all screens */}
+              <div className="relative z-10 mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[#e5dff6] bg-white/95 p-3.5 shadow-[0_14px_34px_rgba(26,18,52,0.1)] backdrop-blur-md">
                   <div className="flex items-center gap-2 text-xs font-extrabold text-[#5b47df]">
-                    <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#6d5ae6] text-white">
+                    <span className="grid h-6 w-6 flex-none place-items-center rounded-lg bg-[#6d5ae6] text-white">
                       <Wand2 size={13} />
                     </span>
-                    <span>Text-to-Build AI Chat</span>
+                    <span className="truncate">Text &amp; Image-to-Build</span>
                     <span className="motion-pulse-dot ml-auto" />
                   </div>
-                  <p className="mt-1 text-xs text-[#3b3358]">
-                    Describe your business in plain English &amp; watch sections generate live.
+                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-[#3b3358]">
+                    Describe your site or upload a reference screenshot to clone its layout &amp; colors live.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-[#e5dff6] bg-white/95 p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-extrabold text-[#1f1935]">
-                    <BrandMark size={24} />
-                    <span>3D Motion &amp; 8 Palettes</span>
+
+                <div className="rounded-2xl border border-[#e5dff6] bg-white/95 p-3.5 shadow-[0_14px_34px_rgba(26,18,52,0.1)] backdrop-blur-md">
+                  <div className="flex items-center gap-2.5">
+                    <BrandMark size={28} />
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-extrabold text-[#1f1935]">8 Designer Palettes + 3D</div>
+                      <div className="truncate text-[10.5px] text-[#6d658a]">One-click theme &amp; motion restyle</div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-[#3b3358]">
-                    Switch brand colors and add interactive 3D cubes &amp; crystals in one tap.
-                  </p>
+                  <div className="mt-2.5 flex items-center gap-1.5">
+                    {["#6d5ae6", "#0b0a14", "#9c4a27", "#15803d", "#0284c7", "#e11d48", "#d4a853"].map((hex) => (
+                      <span
+                        key={hex}
+                        className="h-4 w-4 rounded-full border border-black/15 shadow-2xs"
+                        style={{ background: hex }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

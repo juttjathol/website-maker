@@ -3,12 +3,21 @@ import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowDownToLine, ArrowLeft, ArrowRight, Copy, FileUp, Globe2, LayoutTemplate,
+  ArrowDownToLine, ArrowLeft, ArrowRight, Coins, Copy, FileUp, Globe2, LayoutTemplate,
   Cloud, HardDrive, LoaderCircle, MoreHorizontal, Pencil, Plus, Sparkles, Trash2,
 } from "lucide-react";
 import type { Project } from "@/lib/schema";
 import { applyPromptToProject } from "@/lib/text-to-build";
 import { dbDelete, dbGetAll, dbPut, syncLocalProjects } from "@/lib/db";
+import {
+  CREATE_WEBSITE_COST,
+  FREE_STARTER_CREDITS,
+  getCreditsState,
+  markProjectUnlocked,
+  spendCredits,
+  type CreditsState,
+} from "@/lib/credits";
+import { CreditRequestModal } from "@/components/credits/CreditRequestModal";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -30,6 +39,14 @@ export default function ProjectsPage() {
   const [toast, setToast] = useState("");
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [syncingLocal, setSyncingLocal] = useState(false);
+  const [creditsState, setCreditsState] = useState<CreditsState>({
+    credits: FREE_STARTER_CREDITS,
+    isSignedIn: false,
+    email: null,
+    isAdmin: false,
+  });
+  const [creditModalOpen, setCreditModalOpen] = useState(false);
+  const [creditModalReason, setCreditModalReason] = useState<"download" | "create" | "general">("create");
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
@@ -46,6 +63,9 @@ export default function ProjectsPage() {
       all.sort((a, b) => b.updatedAt - a.updatedAt);
       setProjects(all);
       setLoading(false);
+    });
+    void getCreditsState().then((s) => {
+      if (!cancelled) setCreditsState(s);
     });
     return () => { cancelled = true; };
   }, []);
@@ -78,21 +98,43 @@ export default function ProjectsPage() {
 
   const createBlank = async () => {
     setBusy(true);
-    let project = newProject(newName.trim() || "My new website");
-    if (aiPrompt.trim()) {
-      project = applyPromptToProject(project, aiPrompt.trim(), { forceFullBuild: true }).project;
-      if (newName.trim() && newName.trim() !== "My new website") {
-        project.name = newName.trim();
+    try {
+      const spend = await spendCredits(CREATE_WEBSITE_COST, "create_website");
+      setCreditsState((prev) => ({ ...prev, credits: spend.creditsRemaining }));
+      if (!spend.allowed) {
+        setCreateOpen(false);
+        setCreditModalReason("create");
+        setCreditModalOpen(true);
+        return;
       }
+      let project = newProject(newName.trim() || "My new website");
+      if (aiPrompt.trim()) {
+        project = applyPromptToProject(project, aiPrompt.trim(), { forceFullBuild: true }).project;
+        if (newName.trim() && newName.trim() !== "My new website") {
+          project.name = newName.trim();
+        }
+      }
+      markProjectUnlocked(project.id);
+      await dbPut(project);
+      router.push(`/builder?project=${encodeURIComponent(project.id)}`);
+    } finally {
+      setBusy(false);
     }
-    await dbPut(project);
-    router.push(`/builder?project=${encodeURIComponent(project.id)}`);
   };
 
   const duplicateWebsite = async (project: Project) => {
-    await dbPut(duplicateProject(project));
+    const spend = await spendCredits(CREATE_WEBSITE_COST, "create_website");
+    setCreditsState((prev) => ({ ...prev, credits: spend.creditsRemaining }));
+    if (!spend.allowed) {
+      setCreditModalReason("create");
+      setCreditModalOpen(true);
+      return;
+    }
+    const copy = duplicateProject(project);
+    markProjectUnlocked(copy.id);
+    await dbPut(copy);
     await refresh();
-    showToast("Website duplicated.");
+    showToast("Website duplicated (-30 credits).");
   };
 
   const removeProject = async (project: Project) => {
@@ -144,10 +186,22 @@ export default function ProjectsPage() {
             <h1 className="text-3xl font-extrabold tracking-tight">My websites</h1>
             <p className="mt-2 text-sm text-[#6c668a]">Your projects, templates and backups — all in one place.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCreditModalReason("general");
+                setCreditModalOpen(true);
+              }}
+              className="btn-app ghost !border-[#ddd5f7] !bg-[#f7f4ff] !text-[#5845d2]"
+            >
+              <Coins size={14} className="text-amber-500" />
+              <span>{creditsState.isAdmin ? "Admin · ∞ Credits" : `${creditsState.credits} Credits`}</span>
+              <span className="rounded-md bg-[#6d5ae6] px-1.5 py-0.5 text-[10px] font-bold text-white">+ Get Credits</span>
+            </button>
             <input ref={fileInput} type="file" accept="application/json,.json" className="hidden" onChange={importBackup} />
             <button className="btn-app ghost" onClick={() => fileInput.current?.click()}><FileUp size={14} /> Import backup</button>
-            <button className="btn-app primary" onClick={() => { setNewName("My new website"); setCreateOpen(true); }}><Plus size={14} /> New website</button>
+            <button className="btn-app primary" onClick={() => { setNewName("My new website"); setCreateOpen(true); }}><Plus size={14} /> New website (30 credits)</button>
           </div>
         </div>
 
@@ -257,6 +311,18 @@ export default function ProjectsPage() {
           </section>
         </div>
       ) : null}
+      <CreditRequestModal
+        open={creditModalOpen}
+        onClose={() => setCreditModalOpen(false)}
+        currentCredits={creditsState.credits}
+        requiredCredits={CREATE_WEBSITE_COST}
+        reason={creditModalReason}
+        userEmail={creditsState.email}
+        isSignedIn={creditsState.isSignedIn}
+        onCreditsUpdated={() => {
+          void getCreditsState().then((s) => setCreditsState(s));
+        }}
+      />
       {toast ? <div role="status" className="toast">{toast}</div> : null}
     </main>
   );

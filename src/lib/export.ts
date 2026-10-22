@@ -240,12 +240,12 @@ async function fetchBinary(url: string): Promise<ArrayBuffer | null> {
   }
 }
 
-export async function exportProjectZip(project: Project): Promise<void> {
+export async function exportProjectZip(project: Project, planOverride?: "free" | "pro"): Promise<void> {
   const zip = new JSZip();
   const imgFolder = zip.folder("assets");
 
-  /* Free owners keep the watermark; Pro owners export without it. */
-  const plan = await getMyPlan();
+  /* Free owners keep the watermark; Pro/credit-paid exports have no watermark. */
+  const plan = planOverride || (await getMyPlan());
   assert3DExportAllowed(project, plan);
   const watermark = plan !== "pro";
 

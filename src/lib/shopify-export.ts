@@ -562,13 +562,13 @@ function validateThemeFiles(files: Map<string, ThemeFile>) {
   }
 }
 
-export async function buildShopifyThemeFiles(project: Project): Promise<Map<string, ThemeFile>> {
+export async function buildShopifyThemeFiles(project: Project, planOverride?: "free" | "pro"): Promise<Map<string, ThemeFile>> {
   if (!project.pages.length) throw new Error("Add at least one page before creating a Shopify theme.");
   const pages = project.pages;
   const firstPage = pages[0];
   const { assets, sourceNames } = await collectThemeImages(project);
   const files = new Map<string, ThemeFile>();
-  const plan = await getMyPlan();
+  const plan = planOverride || (await getMyPlan());
   assert3DExportAllowed(project, plan);
   const watermark = plan !== "pro";
 
@@ -641,8 +641,8 @@ Made with Webloom.
 `;
 }
 
-export async function exportShopifyThemeZip(project: Project): Promise<void> {
-  const files = await buildShopifyThemeFiles(project);
+export async function exportShopifyThemeZip(project: Project, planOverride?: "free" | "pro"): Promise<void> {
+  const files = await buildShopifyThemeFiles(project, planOverride);
   const zip = new JSZip();
   for (const [path, content] of files) zip.file(path, content);
   const blob = await zip.generateAsync({

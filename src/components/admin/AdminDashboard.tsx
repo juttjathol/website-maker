@@ -2,7 +2,7 @@
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Ban, CheckCircle2, Clipboard, FolderOpen, KeyRound, LoaderCircle, Search, Shield, Sparkles, Users, X } from "lucide-react";
+import { Activity, Ban, CheckCircle2, Clipboard, Coins, FolderOpen, KeyRound, LoaderCircle, Plus, Search, Shield, Users, X } from "lucide-react";
 import { formatBytes } from "@/lib/storage-limits";
 import { callWebloomAdminFunction } from "@/lib/supabase/admin-functions";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -16,6 +16,7 @@ export interface AdminCustomer {
   mustChangePassword: boolean;
   projectCount: number;
   plan: "free" | "pro";
+  credits: number;
 }
 
 export interface AdminSubscriptionRequest {
@@ -24,6 +25,8 @@ export interface AdminSubscriptionRequest {
   email: string;
   message: string;
   status: "pending" | "approved" | "rejected";
+  requestedCredits: number;
+  requestType: "credits" | "pricing";
   createdAt: string;
 }
 
@@ -96,6 +99,8 @@ export function AdminDashboard({
           email: string;
           message?: string | null;
           status?: string;
+          requested_credits?: number;
+          request_type?: string;
           created_at: string;
         }>;
       }>({ action: "list_subscription_requests" });
@@ -107,6 +112,8 @@ export function AdminDashboard({
             email: r.email,
             message: r.message || "",
             status: r.status === "approved" ? "approved" : r.status === "rejected" ? "rejected" : "pending",
+            requestedCredits: typeof r.requested_credits === "number" ? r.requested_credits : 10,
+            requestType: r.request_type === "pricing" ? "pricing" : "credits",
             createdAt: r.created_at,
           }))
         );
@@ -126,6 +133,8 @@ export function AdminDashboard({
         email: string;
         message?: string | null;
         status?: string;
+        requested_credits?: number;
+        request_type?: string;
         created_at: string;
       }>;
     }>({ action: "list_subscription_requests" })
@@ -138,6 +147,8 @@ export function AdminDashboard({
               email: r.email,
               message: r.message || "",
               status: r.status === "approved" ? "approved" : r.status === "rejected" ? "rejected" : "pending",
+              requestedCredits: typeof r.requested_credits === "number" ? r.requested_credits : 10,
+              requestType: r.request_type === "pricing" ? "pricing" : "credits",
               createdAt: r.created_at,
             }))
           );
@@ -219,32 +230,57 @@ export function AdminDashboard({
     router.refresh();
   };
 
-  const setCustomerPlan = async (customer: AdminCustomer, plan: "free" | "pro") => {
-    const label = plan === "pro" ? "grant Pro and remove their watermark" : "return this customer to the free plan (watermark comes back)";
-    if (!window.confirm(`Do you want to ${label} for ${customer.email}?`)) return;
+  const adjustCustomerCredits = async (customer: AdminCustomer, delta: number) => {
     setPendingSubId(customer.id);
     setMessage("");
     try {
-      await callWebloomAdminFunction({ action: "set_user_plan", userId: customer.id, plan });
-      setMessage(`${customer.email} is now on the ${plan} plan.`);
+      const res = await callWebloomAdminFunction<{ credits?: number }>({
+        action: "adjust_user_credits",
+        userId: customer.id,
+        delta,
+      });
+      setMessage(
+        `${delta >= 0 ? `Added +${delta}` : `Adjusted ${delta}`} credits for ${customer.email} (new balance: ${res.credits ?? customer.credits + delta} credits).`
+      );
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The subscription could not be updated.");
+      setMessage(error instanceof Error ? error.message : "Could not adjust user credits.");
     } finally {
       setPendingSubId("");
     }
   };
 
+  const customAdjustCustomerCredits = async (customer: AdminCustomer) => {
+    const raw = window.prompt(
+      `How many credits would you like to add to ${customer.email}? (Current balance: ${customer.credits} credits. Enter a positive number like 50, or negative like -10 to deduct.)`,
+      "40"
+    );
+    if (!raw) return;
+    const delta = Math.round(Number(raw));
+    if (!Number.isFinite(delta) || delta === 0) return;
+    await adjustCustomerCredits(customer, delta);
+  };
+
   const reviewSubscriptionRequest = async (request: AdminSubscriptionRequest, status: "approved" | "rejected") => {
+    const creditsToGrant = status === "approved" ? Math.max(0, request.requestedCredits || 10) : 0;
     const note = status === "approved" && request.userId
-      ? " Their account will be upgraded to Pro and the watermark removed."
+      ? ` This will automatically add +${creditsToGrant} credits to their account.`
       : "";
-    if (!window.confirm(`${status === "approved" ? "Approve" : "Reject"} the Pro request from ${request.email}?${note}`)) return;
+    if (!window.confirm(`${status === "approved" ? "Approve" : "Reject"} request from ${request.email}?${note}`)) return;
     setPendingSubId(`req-${request.id}`);
     setMessage("");
     try {
-      await callWebloomAdminFunction({ action: "set_subscription_request_status", requestId: request.id, status });
-      setMessage(`Request from ${request.email} ${status}.`);
+      await callWebloomAdminFunction({
+        action: "set_subscription_request_status",
+        requestId: request.id,
+        status,
+        grantCredits: creditsToGrant,
+      });
+      setMessage(
+        status === "approved"
+          ? `Approved request from ${request.email} (+${creditsToGrant} credits added).`
+          : `Request from ${request.email} rejected.`
+      );
       if (loadRequestsViaFunction) {
         await refreshRequestsFromFunction();
       }
@@ -318,7 +354,7 @@ export function AdminDashboard({
         </div>
         <div className="admin-table-scroll">
           <table className="admin-table">
-            <thead><tr><th>Customer</th><th>Joined</th><th>Websites</th><th>Status</th><th>Plan</th><th>Access controls</th></tr></thead>
+            <thead><tr><th>Customer</th><th>Joined</th><th>Websites</th><th>Status</th><th>Credits</th><th>Credits &amp; Access Controls</th></tr></thead>
             <tbody>
               {visible.map((customer) => {
                 const isBusy = pendingId === customer.id;
@@ -329,12 +365,37 @@ export function AdminDashboard({
                     <td>{new Date(customer.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</td>
                     <td>{customer.projectCount}</td>
                     <td><span className={`admin-status ${customer.suspended ? "paused" : customer.mustChangePassword ? "setup" : "active"}`}>{status}</span></td>
-                    <td><span className={`admin-status ${customer.plan === "pro" ? "active" : ""}`}>{customer.plan === "pro" ? "Pro" : "Free"}</span></td>
+                    <td>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#f4f1ff] px-2.5 py-1 text-xs font-extrabold text-[#5744d4]">
+                        <Coins size={12} className="text-amber-500" />
+                        {customer.id === currentAdminId ? "Admin (∞)" : `${customer.credits} Credits`}
+                      </span>
+                    </td>
                     <td>
                       <div className="admin-row-actions">
-                        <button className={`admin-row-action ${customer.plan === "pro" ? "pause" : "restore"}`} onClick={() => void setCustomerPlan(customer, customer.plan === "pro" ? "free" : "pro")} disabled={isBusy || pendingSubId === customer.id || customer.id === currentAdminId} title={customer.plan === "pro" ? "Return to the free plan (watermark returns)" : "Grant Pro — removes the watermark from their websites"}>
-                          <Sparkles size={13} />
-                          {pendingSubId === customer.id ? "Updating…" : customer.plan === "pro" ? "Remove Pro" : "Grant Pro"}
+                        <button
+                          className="admin-row-action restore"
+                          onClick={() => void adjustCustomerCredits(customer, 10)}
+                          disabled={isBusy || pendingSubId === customer.id}
+                          title="Add +10 credits (1 website download)"
+                        >
+                          <Plus size={12} /> +10 Credits
+                        </button>
+                        <button
+                          className="admin-row-action restore"
+                          onClick={() => void adjustCustomerCredits(customer, 40)}
+                          disabled={isBusy || pendingSubId === customer.id}
+                          title="Add +40 credits (1 website build + 1 download)"
+                        >
+                          <Plus size={12} /> +40 Credits
+                        </button>
+                        <button
+                          className="admin-row-action reset"
+                          onClick={() => void customAdjustCustomerCredits(customer)}
+                          disabled={isBusy || pendingSubId === customer.id}
+                          title="Add or deduct a custom credit amount"
+                        >
+                          <Coins size={12} /> Custom
                         </button>
                         <button className={`admin-row-action ${customer.suspended ? "restore" : "pause"}`} onClick={() => void toggleSuspension(customer)} disabled={isBusy || customer.id === currentAdminId} title={customer.id === currentAdminId ? "You cannot pause your own admin account" : undefined}>
                           {customer.suspended ? <CheckCircle2 size={13} /> : <Ban size={13} />}
@@ -357,21 +418,32 @@ export function AdminDashboard({
       </section>
 
       <section className="admin-card">
-        <div className="admin-card-heading"><div><h2>Subscription requests</h2><p>Customers asking for Pro (watermark removal). Approving a request upgrades that customer instantly.</p></div><span className="admin-list-count">{pendingRequests} pending</span></div>
+        <div className="admin-card-heading">
+          <div>
+            <h2>Credit requests &amp; pricing inquiries</h2>
+            <p>Users requesting credits to download their website (+10) or build new websites (+30), or asking about credit pricing. Approving adds the requested credits automatically.</p>
+          </div>
+          <span className="admin-list-count">{pendingRequests} pending</span>
+        </div>
         {subscriptionRequests.length ? (
           <div className="admin-audit-list">
             {subscriptionRequests.map((request) => (
               <div key={request.id}>
                 <span className={`admin-audit-dot ${request.status === "rejected" ? "warning" : ""}`} />
                 <span>
-                  <strong>{request.email}</strong>
+                  <strong>
+                    {request.email}{" "}
+                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-[#f3f0ff] px-2 py-0.5 text-[10px] font-extrabold text-[#5744d4]">
+                      {request.requestType === "pricing" ? "💬 Pricing Inquiry" : "🪙 Credit Request"} · +{request.requestedCredits} Credits
+                    </span>
+                  </strong>
                   <small>{request.message ? `“${request.message}” · ` : ""}{new Date(request.createdAt).toLocaleString()}</small>
                 </span>
                 {request.status === "pending" ? (
                   <span className="admin-row-actions">
-                    <button className="admin-row-action restore" onClick={() => void reviewSubscriptionRequest(request, "approved")} disabled={pendingSubId === `req-${request.id}`} title="Grant Pro and remove their watermark">
+                    <button className="admin-row-action restore" onClick={() => void reviewSubscriptionRequest(request, "approved")} disabled={pendingSubId === `req-${request.id}`} title={`Approve and add +${request.requestedCredits} credits to this user`}>
                       {pendingSubId === `req-${request.id}` ? <LoaderCircle size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-                      Approve
+                      Approve (+{request.requestedCredits} Credits)
                     </button>
                     <button className="admin-row-action reset" onClick={() => void reviewSubscriptionRequest(request, "rejected")} disabled={pendingSubId === `req-${request.id}`} title="Reject this request">
                       <X size={13} />
@@ -384,7 +456,7 @@ export function AdminDashboard({
               </div>
             ))}
           </div>
-        ) : <p className="admin-empty">No subscription requests yet. Customers request Pro from their account page.</p>}
+        ) : <p className="admin-empty">No credit requests or pricing messages yet.</p>}
       </section>
 
       <section className="admin-card admin-audit-card">

@@ -111,8 +111,8 @@ button:disabled{cursor:not-allowed;opacity:.45}
 
 /* Mini 6-Face CSS 3D Rotating Cubes */
 .wk-mini-3d-wrap{position:absolute;z-index:15}
-.motion-hero-cube-top{top:-22px;right:18px}
-.motion-hero-cube-bottom{bottom:18px;left:-20px}
+.motion-hero-cube-top{top:-24px;left:-18px}
+.motion-hero-cube-bottom{bottom:135px;right:-18px}
 .motion-cta-cube-left{top:26px;left:36px}
 .motion-cta-cube-right{bottom:26px;right:36px}
 .wk-mini-3d-cube{width:100%;height:100%;position:relative;transform-style:preserve-3d;animation:wkMiniCubeSpin 12s linear infinite}
@@ -127,7 +127,7 @@ button:disabled{cursor:not-allowed;opacity:.45}
 /* Interactive 3D Holo-Stage Showcase */
 .wk-holo-stage-shell{display:flex;flex-direction:column;justify-content:space-between;isolation:isolate;touch-action:pan-y}
 .wk-holo-floor-grid{position:absolute;inset:38% -20% -30%;background-image:linear-gradient(to right,var(--grid-line,rgba(139,92,246,.28)) 1px,transparent 1px),linear-gradient(to bottom,var(--grid-line,rgba(139,92,246,.28)) 1px,transparent 1px);background-size:40px 40px;transform:perspective(560px) rotateX(68deg);transform-origin:center top;animation:wkGridFlow 14s linear infinite}
-.wk-holo-camera-viewport{position:relative;flex:1;min-height:240px;display:grid;place-items:center;overflow: visible}
+.wk-holo-camera-viewport{position:relative;flex:1;min-height:260px;display:grid;place-items:center;overflow:hidden}
 .wk-holo-camera-rig{position:relative;width:100%;height:260px;transform-style:preserve-3d;transition:transform .18s cubic-bezier(.22,1,.36,1)}
 .wk-holo-ring{position:absolute;left:50%;top:50%;border-radius:999px;border:1.5px dashed rgba(167,139,250,.45);transform-style:preserve-3d;pointer-events:none}
 .wk-holo-ring-1{width:290px;height:290px;margin-left:-145px;margin-top:-145px;transform:rotateX(72deg) rotateY(10deg);animation:wkHoloRingSpin 16s linear infinite}

@@ -7,11 +7,18 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
-  ArrowLeft, Check, ChevronDown, CircleHelp, Cloud, CloudOff, Download, Eye, HardDrive,
+  ArrowLeft, Check, ChevronDown, CircleHelp, Cloud, CloudOff, Coins, Download, Eye, HardDrive,
   Layers, Monitor, Plus, Redo2, Rocket, ShoppingBag, SlidersHorizontal, Smartphone, Sparkles, Tablet, Undo2, X,
 } from "lucide-react";
 import type { BlockType, Device, Project } from "@/lib/schema";
-import { getMyPlan } from "@/lib/db";
+import {
+  chargeWebsiteCreationCredits,
+  DOWNLOAD_WEBSITE_COST,
+  FREE_STARTER_CREDITS,
+  getCreditsState,
+  spendCredits,
+  type CreditsState,
+} from "@/lib/credits";
 import { BRAND } from "@/lib/brand";
 import { BrandMark } from "@/components/site/BrandLogo";
 import { BLOCKS } from "@/lib/registry";
@@ -25,6 +32,7 @@ import { Inspector } from "./Inspector";
 import { LeftPanel } from "./LeftPanel";
 import { PublishWizard } from "./PublishWizard";
 import { BuilderGuide, type GuideAction } from "./BuilderGuide";
+import { CreditRequestModal } from "@/components/credits/CreditRequestModal";
 
 const DEVICE_BUTTONS: { device: Device; label: string; Icon: typeof Monitor }[] = [
   { device: "desktop", label: "Computer preview", Icon: Monitor },
@@ -33,20 +41,35 @@ const DEVICE_BUTTONS: { device: Device; label: string; Icon: typeof Monitor }[] 
 ];
 
 export function BuilderWorkbench({ project: initialProject }: { project: Project }) {
+  const [creditsState, setCreditsState] = useState<CreditsState>({
+    credits: FREE_STARTER_CREDITS,
+    isSignedIn: false,
+    email: null,
+    isAdmin: false,
+  });
+  const [creditModalOpen, setCreditModalOpen] = useState(false);
+  const [creditModalReason, setCreditModalReason] = useState<"download" | "create" | "general">("download");
+
+  const project = useEditor((s) => s.project) || initialProject;
+
   useEffect(() => {
     let alive = true;
-    let request = 0;
-    useEditor.getState().setPlan("free");
-    const refreshPlan = async () => {
-      const current = ++request;
-      const plan = await getMyPlan().catch(() => "free" as const);
-      if (alive && current === request) useEditor.getState().setPlan(plan);
+    useEditor.getState().setPlan("pro");
+    const syncCredits = () => {
+      void chargeWebsiteCreationCredits(initialProject.id)
+        .then(() => getCreditsState())
+        .then((state) => {
+          if (alive) setCreditsState(state);
+        })
+        .catch(() => {});
     };
-    void refreshPlan();
-    window.addEventListener("focus", refreshPlan);
-    return () => { alive = false; window.removeEventListener("focus", refreshPlan); useEditor.getState().setPlan("free"); };
-  }, []);
-  const project = useEditor((s) => s.project) || initialProject;
+    syncCredits();
+    window.addEventListener("focus", syncCredits);
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", syncCredits);
+    };
+  }, [initialProject.id]);
   const pageId = useEditor((s) => s.currentPageId);
   const device = useEditor((s) => s.device);
   const previewMode = useEditor((s) => s.previewMode);
@@ -135,8 +158,20 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
   const performExport = async (): Promise<boolean> => {
     setExporting(true);
     try {
-      await exportProjectZip(project);
-      showToast("Your website download is ready!");
+      const spend = await spendCredits(DOWNLOAD_WEBSITE_COST, "download_website");
+      setCreditsState((prev) => ({ ...prev, credits: spend.creditsRemaining }));
+      if (!spend.allowed) {
+        setPublishOpen(false);
+        setCreditModalReason("download");
+        setCreditModalOpen(true);
+        return false;
+      }
+      await exportProjectZip(project, "pro");
+      showToast(
+        creditsState.isAdmin
+          ? "Your website download is ready!"
+          : `Website downloaded! (-${DOWNLOAD_WEBSITE_COST} credits · ${spend.creditsRemaining} left)`
+      );
       return true;
     } catch (error) {
       console.error("Website export failed", error);
@@ -150,8 +185,20 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
   const performShopifyExport = async (): Promise<boolean> => {
     setShopifyExporting(true);
     try {
-      await exportShopifyThemeZip(project);
-      showToast("Your Shopify theme ZIP is ready. Preview it in Shopify before publishing.");
+      const spend = await spendCredits(DOWNLOAD_WEBSITE_COST, "download_shopify");
+      setCreditsState((prev) => ({ ...prev, credits: spend.creditsRemaining }));
+      if (!spend.allowed) {
+        setPublishOpen(false);
+        setCreditModalReason("download");
+        setCreditModalOpen(true);
+        return false;
+      }
+      await exportShopifyThemeZip(project, "pro");
+      showToast(
+        creditsState.isAdmin
+          ? "Your Shopify theme ZIP is ready!"
+          : `Shopify theme downloaded! (-${DOWNLOAD_WEBSITE_COST} credits · ${spend.creditsRemaining} left)`
+      );
       return true;
     } catch (error) {
       console.error("Shopify theme export failed", error);
@@ -230,6 +277,18 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
         </div>
 
         <div className="toolbar-right">
+          <button
+            type="button"
+            onClick={() => {
+              setCreditModalReason("general");
+              setCreditModalOpen(true);
+            }}
+            className="btn-app ghost !border-[#ded6f8] !bg-[#f7f4ff] !px-2.5 !py-1.5 !text-[11px] !font-extrabold !text-[#5845d2]"
+            title="View your credits balance, request credits, or message Admin about pricing"
+          >
+            <Coins size={13} className="text-amber-500" />
+            <span>{creditsState.isAdmin ? "Admin · ∞" : `${creditsState.credits} Credits`}</span>
+          </button>
           <button
             type="button"
             className={cx("btn-app", leftTab === "chat" && !previewMode ? "primary" : "ghost", "ai-chat-toolbar-btn")}
@@ -373,6 +432,18 @@ export function BuilderWorkbench({ project: initialProject }: { project: Project
       {publishOpen ? (
         <PublishWizard project={project} onClose={() => setPublishOpen(false)} onExport={performExport} onShopifyExport={performShopifyExport} />
       ) : null}
+      <CreditRequestModal
+        open={creditModalOpen}
+        onClose={() => setCreditModalOpen(false)}
+        currentCredits={creditsState.credits}
+        requiredCredits={DOWNLOAD_WEBSITE_COST}
+        reason={creditModalReason}
+        userEmail={creditsState.email}
+        isSignedIn={creditsState.isSignedIn}
+        onCreditsUpdated={() => {
+          void getCreditsState().then((s) => setCreditsState(s));
+        }}
+      />
       <BuilderGuide
         open={guideOpen}
         onClose={() => setGuideOpen(false)}

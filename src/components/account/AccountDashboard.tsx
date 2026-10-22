@@ -3,8 +3,9 @@
 import React, { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Cloud, HardDrive, KeyRound, LoaderCircle, LogOut, RefreshCw, Shield, Sparkles, UserRound } from "lucide-react";
+import { ArrowRight, Cloud, Coins, HardDrive, KeyRound, LoaderCircle, LogOut, RefreshCw, Shield, UserRound } from "lucide-react";
 import { syncLocalProjects } from "@/lib/db";
+import { CREDIT_PACKS, CREATE_WEBSITE_COST, DOWNLOAD_WEBSITE_COST } from "@/lib/credits";
 import { CLOUD_STORAGE_LIMITS, formatBytes } from "@/lib/storage-limits";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { callWebloomAdminFunction } from "@/lib/supabase/admin-functions";
@@ -27,7 +28,7 @@ export function AccountDashboard({
   projectCount,
   isAdmin,
   isSuspended,
-  plan,
+  credits = 30,
   storageStatus,
 }: {
   userId: string;
@@ -37,7 +38,8 @@ export function AccountDashboard({
   projectCount: number;
   isAdmin: boolean;
   isSuspended: boolean;
-  plan: "free" | "pro";
+  plan?: "free" | "pro";
+  credits?: number;
   storageStatus: AccountStorageStatus | null;
 }) {
   const router = useRouter();
@@ -50,18 +52,29 @@ export function AccountDashboard({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
+  const [requestedCredits, setRequestedCredits] = useState<number>(40);
+  const [requestType, setRequestType] = useState<"credits" | "pricing">("credits");
   const [upgradeMessage, setUpgradeMessage] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [requestResult, setRequestResult] = useState("");
 
-  const requestSubscription = async (event: FormEvent<HTMLFormElement>) => {
+  const requestCreditsFromAdmin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setRequesting(true);
     setRequestResult("");
     try {
-      await callWebloomAdminFunction({ action: "request_subscription", message: upgradeMessage.trim().slice(0, 500) });
+      await callWebloomAdminFunction({
+        action: "request_credits",
+        requestedCredits,
+        requestType,
+        message: upgradeMessage.trim().slice(0, 500),
+      });
       setUpgradeMessage("");
-      setRequestResult("Request sent. Webloom staff will contact you at your account email about a subscription.");
+      setRequestResult(
+        requestType === "pricing"
+          ? "Pricing inquiry sent! The Webloom Admin will reply and add credits to your account."
+          : `Request for +${requestedCredits} credits sent! The Admin can approve and add them from the Admin Console.`
+      );
     } catch (error) {
       setRequestResult(error instanceof Error ? error.message : "The request could not be sent. Please try again.");
     } finally {
@@ -142,7 +155,11 @@ export function AccountDashboard({
         <section className="account-card account-profile-card">
           <div className="account-card-heading"><span className="account-card-icon"><UserRound size={18} /></span><div><h2>Profile</h2><p>Your sign-in and display details</p></div></div>
           <div className="account-email-row"><span>Email address</span><strong>{email}</strong><small>Account access granted by Webloom staff</small></div>
-          <div className="account-email-row"><span>Plan</span><strong>{plan === "pro" ? "Webloom Pro" : "Free"}</strong><small>{plan === "pro" ? "No watermark on your published websites" : "A Webloom badge shows on your published websites"}</small></div>
+          <div className="account-email-row">
+            <span>Credits balance</span>
+            <strong>{isAdmin ? "Unlimited (Platform Admin)" : `${credits} Credits`}</strong>
+            <small>Free accounts start with 30 credits · Making 1 website uses {CREATE_WEBSITE_COST} credits · Downloading uses {DOWNLOAD_WEBSITE_COST} credits</small>
+          </div>
           <form className="account-profile-form" onSubmit={saveProfile}>
             <label htmlFor="account-display-name">Display name</label>
             <input id="account-display-name" maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="What should we call you?" />
@@ -151,26 +168,92 @@ export function AccountDashboard({
           <p className="account-created-note">Account created {new Date(createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</p>
         </section>
 
-        {plan === "free" ? (
-          <section className="account-card">
-            <div className="account-card-heading"><span className="account-card-icon"><Sparkles size={18} /></span><div><h2>Webloom Pro</h2><p>Remove the watermark from your website</p></div></div>
-            <p className="account-card-copy">Your free plan shows a small “WEBLOOM by JATHOL” badge at the bottom of your published website. Go Pro to remove it and unlock extra tools.</p>
-            <form className="account-profile-form" onSubmit={requestSubscription}>
-              <label htmlFor="upgrade-email">Your email</label>
-              <input id="upgrade-email" type="email" value={email} readOnly />
-              <label htmlFor="upgrade-message">Anything we should know? (optional)</label>
-              <textarea id="upgrade-message" rows={3} maxLength={500} value={upgradeMessage} onChange={(event) => setUpgradeMessage(event.target.value)} placeholder="Tell us about your website or question" />
-              <button className="btn-app primary" type="submit" disabled={requesting}>{requesting ? <LoaderCircle size={14} className="animate-spin" /> : null}{requesting ? "Sending…" : "Request Webloom Pro"}</button>
-            </form>
-            {requestResult ? <p className="account-inline-result" role="status">{requestResult}</p> : null}
-            <p className="account-created-note">Prefer email? Write to <a href="mailto:contact@jathol.org">contact@jathol.org</a> and we will set up your subscription.</p>
-          </section>
-        ) : (
-          <section className="account-card">
-            <div className="account-card-heading"><span className="account-card-icon"><Sparkles size={18} /></span><div><h2>Webloom Pro</h2><p>Active on your account</p></div></div>
-            <p className="account-card-copy">Your websites publish without the Webloom watermark. Thank you for your subscription.</p>
-          </section>
-        )}
+        <section className="account-card">
+          <div className="account-card-heading">
+            <span className="account-card-icon"><Coins size={18} /></span>
+            <div>
+              <h2>Webloom Credits &amp; Pricing</h2>
+              <p>Request more credits or message the Admin about pricing</p>
+            </div>
+          </div>
+          <p className="account-card-copy">
+            Every account gets <strong>30 starter credits</strong> (1 full website build). Downloading your finished website ZIP or Shopify theme requires <strong>10 more credits</strong>. Pick a credit pack below or message the Admin about pricing so they can add credits to your account.
+          </p>
+          <form className="account-profile-form" onSubmit={requestCreditsFromAdmin}>
+            <label>What would you like to do?</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setRequestType("credits")}
+                className={`rounded-xl border px-3 py-2 text-xs font-extrabold transition ${
+                  requestType === "credits"
+                    ? "border-[#6d5ae6] bg-[#f4f1ff] text-[#5744d4]"
+                    : "border-[#e4dff2] bg-white text-[#5e567a]"
+                }`}
+              >
+                Request Credits
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestType("pricing")}
+                className={`rounded-xl border px-3 py-2 text-xs font-extrabold transition ${
+                  requestType === "pricing"
+                    ? "border-[#6d5ae6] bg-[#f4f1ff] text-[#5744d4]"
+                    : "border-[#e4dff2] bg-white text-[#5e567a]"
+                }`}
+              >
+                Ask About Credit Pricing
+              </button>
+            </div>
+
+            <label>How many credits do you need?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {CREDIT_PACKS.map((pack) => (
+                <button
+                  key={pack.credits}
+                  type="button"
+                  onClick={() => setRequestedCredits(pack.credits)}
+                  className={`rounded-xl border p-2.5 text-left transition ${
+                    requestedCredits === pack.credits
+                      ? "border-[#6d5ae6] bg-[#f4f1ff]"
+                      : "border-[#e6e1f4] bg-white"
+                  }`}
+                >
+                  <strong className="block text-xs font-extrabold text-[#1e1834]">{pack.label}</strong>
+                  <span className="mt-0.5 block text-[10.5px] text-[#6a6287]">{pack.subtitle}</span>
+                </button>
+              ))}
+            </div>
+
+            <label htmlFor="upgrade-message">
+              {requestType === "pricing"
+                ? "Message to Admin about credit pricing"
+                : "Note for Admin (optional)"}
+            </label>
+            <textarea
+              id="upgrade-message"
+              rows={3}
+              maxLength={500}
+              value={upgradeMessage}
+              onChange={(event) => setUpgradeMessage(event.target.value)}
+              placeholder={
+                requestType === "pricing"
+                  ? "Ask about credit pack pricing, bulk agency credits, or payment options…"
+                  : "e.g. Ready to download my website ZIP — please add credits to my account!"
+              }
+            />
+            <button className="btn-app primary" type="submit" disabled={requesting}>
+              {requesting ? <LoaderCircle size={14} className="animate-spin" /> : <Coins size={14} />}
+              {requesting
+                ? "Sending to Admin…"
+                : requestType === "pricing"
+                  ? `Message Admin About +${requestedCredits} Credits Pricing`
+                  : `Request +${requestedCredits} Credits From Admin`}
+            </button>
+          </form>
+          {requestResult ? <p className="account-inline-result" role="status">{requestResult}</p> : null}
+          <p className="account-created-note">Prefer email? Write to <a href="mailto:contact@jathol.org">contact@jathol.org</a> and we will top up your credits.</p>
+        </section>
 
         <section className="account-card account-cloud-card">
           <div className="account-card-heading"><span className="account-card-icon cloud"><Cloud size={18} /></span><div><h2>Your cloud workspace</h2><p>Only you can access these websites</p></div></div>

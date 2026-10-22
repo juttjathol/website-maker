@@ -203,35 +203,35 @@ export function Interactive3DShowcase() {
           {/* Interactive 3D Holo-Stage */}
           <div
             onPointerMove={handlePointerMove}
-            className="wk-holo-stage-shell group relative min-h-[340px] cursor-grab overflow-hidden rounded-3xl border border-white/15 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] active:cursor-grabbing sm:min-h-[420px] sm:p-7"
+            className="wk-holo-stage-shell group relative flex flex-col justify-between cursor-grab overflow-hidden rounded-3xl border border-white/15 shadow-[0_30px_90px_rgba(0,0,0,0.55)] active:cursor-grabbing"
             style={{ background: preset.background }}
           >
-            {/* 3D Perspective Floor Grid */}
-            <div
-              className="wk-holo-floor-grid pointer-events-none"
-              style={{ "--grid-line": preset.gridColor } as React.CSSProperties}
-              aria-hidden="true"
-            />
-
-            {/* Top HUD overlay */}
-            <div className="relative z-10 flex flex-wrap items-center justify-between gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-xs font-bold text-white/90 backdrop-blur-md">
+            {/* Top HUD header strip (separate from 3D viewport so text never overlaps 3D shapes) */}
+            <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-md sm:px-5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold text-white/95">
                 <span className="motion-pulse-dot" />
                 <span>{preset.name}</span>
                 <span className="text-white/50">·</span>
                 <span className="text-[#c4b5fd]">{preset.badge}</span>
               </div>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[11px] font-semibold text-white/75 backdrop-blur-md">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/80">
                 <Orbit size={13} className="text-[#38bdf8]" />
                 <span>Touch or move pointer to tilt 3D camera</span>
               </div>
             </div>
 
-            {/* 3D Camera Rig */}
+            {/* Dedicated Middle 3D Camera Viewport */}
             <div
-              className="wk-holo-camera-viewport"
+              className="wk-holo-camera-viewport relative h-[280px] w-full overflow-hidden sm:h-[340px]"
               style={{ perspective: "980px" }}
             >
+              {/* 3D Perspective Floor Grid */}
+              <div
+                className="wk-holo-floor-grid pointer-events-none"
+                style={{ "--grid-line": preset.gridColor } as React.CSSProperties}
+                aria-hidden="true"
+              />
+
               <div
                 className={`wk-holo-camera-rig ${
                   speed === "paused"
@@ -295,8 +295,8 @@ export function Interactive3DShowcase() {
               </div>
             </div>
 
-            {/* Bottom Caption inside stage */}
-            <div className="relative z-10 mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 text-xs text-white/75">
+            {/* Bottom Caption footer strip (separate from 3D viewport so text never overlaps 3D shapes) */}
+            <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-black/45 px-4 py-3 text-xs text-white/80 backdrop-blur-md sm:px-5">
               <span>{preset.tagline}</span>
               <span className="font-mono text-[11px] text-[#a78bfa]">
                 tiltX: {tilt.x}° · tiltY: {tilt.y}°

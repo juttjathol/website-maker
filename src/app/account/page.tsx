@@ -29,7 +29,7 @@ export default async function AccountPage() {
   if (!user) redirect("/sign-in?next=%2Faccount");
 
   const [{ data: profile }, { count: projectCount }, { data: admin }, { data: storageRows }] = await Promise.all([
-    supabase.from("profiles").select("display_name,suspended_at,created_at,plan").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("display_name,suspended_at,created_at,plan,credits").eq("id", user.id).maybeSingle(),
     supabase.from("projects").select("id", { count: "exact", head: true }),
     supabase.rpc("is_platform_admin"),
     supabase.rpc("webloom_cloud_storage_status"),
@@ -43,7 +43,7 @@ export default async function AccountPage() {
       </header>
       <div className="account-page-content">
         <div className="account-page-title">
-          <div><p className="account-eyebrow">YOUR WEBLOOM ACCOUNT</p><h1>Account & cloud sync</h1><p>Your projects are attached to your email, so you can get back to them on another device.</p></div>
+          <div><p className="account-eyebrow">YOUR WEBLOOM ACCOUNT</p><h1>Account, credits &amp; cloud sync</h1><p>Manage your Webloom credits, cloud projects, and sign-in details.</p></div>
           <span className="account-status-pill"><ShieldCheck size={14} /> Private account</span>
         </div>
         <AccountDashboard
@@ -55,6 +55,7 @@ export default async function AccountPage() {
           isAdmin={admin === true}
           isSuspended={Boolean(profile?.suspended_at)}
           plan={profile?.plan === "pro" ? "pro" : "free"}
+          credits={typeof profile?.credits === "number" ? profile.credits : 30}
           storageStatus={storageRows?.[0] || null}
         />
       </div>
